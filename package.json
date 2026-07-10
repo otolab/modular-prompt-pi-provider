@@ -1,0 +1,48 @@
+{
+  "name": "@modular-prompt/pi-provider-ext",
+  "version": "0.0.0",
+  "description": "Pi coding agent extension: modular-prompt MLX driver as a custom LLM provider",
+  "type": "module",
+  "private": true,
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "pi-extension",
+    "modular-prompt",
+    "mlx",
+    "local-llm"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modular-prompt/driver": "^0.13.4"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/otolab/modular-prompt-pi-provider.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
