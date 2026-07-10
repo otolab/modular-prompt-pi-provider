@@ -42,6 +42,21 @@ npm run typecheck
 
 Pi は [jiti](https://github.com/unjs/jiti) で TypeScript を直接ロードするため、ビルドは必須ではない。
 
+## ドキュメント
+
+詳細は [docs/](./docs/) を参照。
+
+| 文書 | 内容 |
+|------|------|
+| [architecture](./docs/architecture.md) | 全体構成・責務分担 |
+| [pi-apis](./docs/pi-apis.md) | Pi 拡張 API（イベント含む） |
+| [modular-prompt-apis](./docs/modular-prompt-apis.md) | driver 消費 API |
+| [adapter](./docs/adapter.md) | 型変換 |
+| [streaming](./docs/streaming.md) | 増分パーサ |
+| [compaction](./docs/compaction.md) | compact・overflow |
+| [implementation-plan](./docs/implementation-plan.md) | 優先度・マイルストーン |
+| [distribution](./docs/distribution.md) | 配布・npm |
+
 ## 関連
 
 - [modular-prompt](https://github.com/otolab/modular-prompt) — MLX ドライバ本体
@@ -50,4 +65,4 @@ Pi は [jiti](https://github.com/unjs/jiti) で TypeScript を直接ロードす
 
 ## ステータス
 
-🚧 スケルトンのみ。`streamSimple` 実装は未着手。
+🚧 スケルトンのみ。`streamSimple` 実装は未着手（[implementation-plan](./docs/implementation-plan.md)）。
