@@ -10,6 +10,7 @@ Pi の `Context` と modular-prompt の `CompiledPrompt` / `QueryOptions` の橋
 | `message-mapper.ts` | Pi `Message` ↔ `MessageElement` |
 | `tools.ts` | `piToolsToToolDefinitions(tools)` |
 | `options.ts` | `piOptionsToQueryOptions(options, model)` |
+| `usage.ts` | `mapQueryResultUsageToPi(result, model)` |
 | `stream-bridge.ts` | `bridgeMlxStreamToPi(...)` |
 | `finish-reason.ts` | `mapFinishReason(...)` |
 
@@ -123,13 +124,44 @@ function piOptionsToQueryOptions(
 
 ## usage マッピング
 
+driver の `result.usage` を Pi の `Usage` に変換する。`promptTokens` はプロバイダ生値であり、Pi の `input` とは別物。
+
 ```typescript
-output.usage.input = result.usage?.promptTokens ?? 0;
-output.usage.output = result.usage?.completionTokens ?? 0;
-output.usage.cacheRead = 0;   // 将来 MLX meta から
-output.usage.cacheWrite = 0;
-calculateCost(model, output.usage);
+function mapQueryResultUsageToPi(
+  result: QueryResult,
+  model: Model,
+): Usage {
+  const promptTokens = result.usage?.promptTokens ?? 0;
+  const completionTokens = result.usage?.completionTokens ?? 0;
+  const cacheRead = result.usage?.cacheReadTokens ?? 0;
+  const cacheWrite = result.usage?.cacheWriteTokens ?? 0;
+  const input = Math.max(0, promptTokens - cacheRead - cacheWrite);
+
+  const usage: Usage = {
+    input,
+    output: completionTokens,
+    cacheRead,
+    cacheWrite,
+    totalTokens: input + completionTokens + cacheRead + cacheWrite,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+  };
+  calculateCost(model, usage);
+  return usage;
+}
 ```
+
+### いつ `output.usage` を更新するか
+
+driver の `stream` には usage がない。`await result` で得たあと、`done` / `error` を push する直前に `output.usage` を上書きする。それ以前の `partial` は 0 のままでよい。
+
+abort 時は `result` に載った usage をそのまま使う（driver が返せる範囲）。#291 P0 前はクライアント側打ち切りのみで、usage は空になりうる。
+
+| driver `result.usage` | Pi `Usage` |
+|---|---|
+| `promptTokens` | `input` 算出の元（そのまま `input` にしない） |
+| `completionTokens` | `output` |
+| `cacheReadTokens` | `cacheRead` |
+| `cacheWriteTokens` | `cacheWrite` |
 
 ## `stream-bridge` 概要
 
@@ -162,6 +194,7 @@ async function bridgeMlxStreamToPi(
     }
 
     const final = await result;
+    output.usage = mapQueryResultUsageToPi(final, model);
     parser.finalizeFromResult(final);
     // done / error
   } catch (e) {

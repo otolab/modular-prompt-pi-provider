@@ -25,6 +25,8 @@ const driver = new MlxDriver({
 
 ## `streamQuery` 戻り値
 
+`StreamResult` は driver 共通の形のまま（[scope.md](./scope.md) 参照）。
+
 ```typescript
 interface StreamResult {
   stream: AsyncIterable<string>;  // 生テキスト（タグ含む）
@@ -37,25 +39,27 @@ interface StreamResult {
 ```typescript
 interface QueryResult {
   content: string;
-  thinkingContent?: string;   // extractThinkingContent 後
+  thinkingContent?: string;
   toolCalls?: ToolCall[];
   finishReason?: 'stop' | 'length' | 'error' | 'tool_calls';
   usage?: {
     promptTokens: number;
     completionTokens: number;
     totalTokens: number;
+    cacheReadTokens?: number;   // #291 P2 以降
+    cacheWriteTokens?: number;
   };
   errors?: LogEntry[];
 }
 ```
 
-### MLX ドライバのストリーム特性
+### ストリームの扱い
 
-1. **ストリーム中は生テキストのみ** — `<think>`, tool call デリミタを含む
-2. **`thinkingContent` / `toolCalls` は `result` 後処理** — `selectResponseProcessor`（`mlx-driver.ts`）
-3. **メタデータ** — ストリーム末尾 `\x1e__META__:` + JSON（token 数）
+1. **`stream` はテキストのみ** — thinking タグ・tool call デリミタを含む生出力
+2. **`thinkingContent` / `toolCalls` は `result` 後処理** — driver 内の `selectResponseProcessor`
+3. **usage は `result` のみ** — ストリームチャンクには含まれない
 
-→ Pi の `thinking_*` / `toolcall_*` をリアルタイムに出すには、本拡張の [増分パーサ](./streaming.md) が必要。
+Pi の `thinking_*` / `toolcall_*` リアルタイム化は本拡張の [増分パーサ](./streaming.md) で行う。
 
 ## `QueryOptions` マッピング
 
@@ -65,7 +69,7 @@ interface QueryResult {
 | `maxTokens` | `maxTokens` | |
 | `reasoning: "off"` | `mode: 'default'` | |
 | `reasoning: "low"\|"medium"\|"high"` | `mode: 'thinking'`, `reasoningEffort` | MLX のみ |
-| `signal` | **未対応** | [#291](https://github.com/otolab/modular-prompt/issues/291) |
+| `signal` | `signal`（#291 P0 以降） | 現状未対応 |
 | — | `stream: true` | 固定 |
 | — | `tools` | `Context.tools` から変換 |
 | — | `cache: true` | `MlxCacheController` 利用時 |
@@ -101,12 +105,12 @@ interface MlxModelCapabilities {
 }
 ```
 
-## 既知ギャップ（driver 側）
+## driver 側の未実装（[#291](https://github.com/otolab/modular-prompt/issues/291)）
 
-| 項目 | 状態 | 追跡 |
-|---|---|---|
-| `QueryOptions.signal` | 未実装 | [#291](https://github.com/otolab/modular-prompt/issues/291) |
-| usage の cacheRead/cacheWrite | 未マッピング | 0 で返すか将来拡張 |
-| 構造化ストリーム | なし | 本拡張の増分パーサで代替 |
+| 項目 | 優先度 |
+|---|---|
+| `QueryOptions.signal` | P0 |
+| MLX `result.usage` の充足 | P1 |
+| `cacheReadTokens` / `cacheWriteTokens` | P2 |
 
-`streamFromMessages` は **作らない**（変換・compact は本拡張の責務）。
+`streamFromMessages` は作らない（変換は本拡張の責務）。

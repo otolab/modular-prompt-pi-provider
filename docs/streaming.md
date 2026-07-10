@@ -97,10 +97,6 @@ if (!parser.emittedToolCalls && final.toolCalls?.length) {
 
 ## abort
 
-`options.signal` が abort されたら:
+`options.signal` の要求仕様は [abort-spec.md](./abort-spec.md) を参照。
 
-1. ストリーム消費を打ち切り
-2. `stopReason: "aborted"` で `error` イベント
-3. MLX 側キャンセルは [#291](https://github.com/otolab/modular-prompt/issues/291) 実装後に `driver` へ伝播
-
-現状はクライアント側打ち切りのみでも Pi ループは進むが、`abort.test.ts` 合格には driver 連携が必要。
+要点: キャンセル時は `stopReason: "aborted"`、部分 content 保持、MLX 推論の実停止は [#291](https://github.com/otolab/modular-prompt/issues/291)。

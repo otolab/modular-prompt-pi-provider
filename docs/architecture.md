@@ -49,9 +49,8 @@ OpenAI 互換ラッパー（Ollama / Rapid-MLX 等）では活かしきれない
 | 層 | 責務 | 実装場所 |
 |---|---|---|
 | Pi コア | エージェントループ、ツール実行、デフォルト compact | Pi 本体 |
-| **本拡張** | プロバイダ登録、`streamSimple`、型変換、増分パーサ、compact Prompt、overflow リライト | 本リポジトリ |
-| modular-prompt | MLX 推論、キャッシュ、tool パース（完了後） | driver パッケージ |
-| modular-prompt 拡張（将来） | `AbortSignal` 等 | [modular-prompt#291](https://github.com/otolab/modular-prompt/issues/291) |
+| **本拡張** | プロバイダ登録、`streamSimple`、型変換、増分パーサ、`result` → Pi `Usage`、compact Prompt、overflow リライト | 本リポジトリ |
+| modular-prompt | MLX 推論、`result.usage`、abort（[#291](https://github.com/otolab/modular-prompt/issues/291)） | driver パッケージ |
 
 ## 設計原則
 

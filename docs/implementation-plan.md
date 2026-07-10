@@ -1,5 +1,7 @@
 # 実装計画
 
+スコープの全体像は [scope.md](./scope.md) を参照。
+
 ## ソース構成（目標）
 
 ```
@@ -14,6 +16,7 @@ modular-prompt-pi-provider/
       message-mapper.ts
       tools.ts
       options.ts
+      usage.ts               # QueryResult → Pi Usage
       stream-bridge.ts
       incremental-parser.ts
       finish-reason.ts
@@ -28,46 +31,14 @@ modular-prompt-pi-provider/
   docs/
 ```
 
-## 優先度
+## 優先度（本リポジトリ）
 
-| 優先度 | 項目 | 完了条件 |
-|---|---|---|
-| **P0** | `streamSimple` 骨格 | `start` → `text_delta` → `done` |
-| **P0** | `Context` → `CompiledPrompt` | 単純な user/assistant 往復 |
-| **P0** | `MlxDriver.streamQuery` 連携 | ローカルモデルで Pi が応答 |
-| **P1** | `toolcall_*`（result 後一括） | read/write ツールループが回る |
-| **P1** | モデル discovery | `pi --list-models` に表示 |
-| **P1** | `session_shutdown` → `close()` | プロセスリークなし |
-| **P1** | `session_before_compact` + Prompt | 長セッションで手動 `/compact` |
-| **P2** | 増分パーサ（thinking リアルタイム） | `<think>` が UI に漏れない |
-| **P2** | `message_end` overflow リライト | overflow 後の自動リトライ |
-| **P3** | `AbortSignal` | [#291](https://github.com/otolab/modular-prompt/issues/291) 後 |
-| **P3** | `context` 剪定 | トークン節約 |
+[scope.md](./scope.md) と同一。実装順の目安:
 
-## マイルストーン
-
-### M1: Hello MLX
-
-- [ ] 固定モデル 1 つを `registerProvider`
-- [ ] テキストのみ `streamSimple`
-- [ ] `pi install` でロード確認
-
-### M2: エージェントとして動く
-
-- [ ] tool call 変換 + `toolUse` 終了
-- [ ] 画像（VLM モデル時）
-- [ ] 動的モデル一覧
-
-### M3: 長セッション
-
-- [ ] compact Prompt
-- [ ] overflow リライト
-- [ ] thinking 増分パーサ
-
-### M4: 品質
-
-- [ ] pi-ai テストスイート（可能な範囲）
-- [ ] npm publish
+1. **P0** — `stream-simple` + adapter + usage マッピング
+2. **P1** — ツール、discovery、セッション、#291 後に signal
+3. **P2** — 増分パーサ、overflow
+4. **P3** — context 剪定
 
 ## テスト
 
@@ -76,8 +47,8 @@ modular-prompt-pi-provider/
 | テスト | 内容 | 依存 |
 |---|---|---|
 | `stream.test.ts` | イベント順序 | M1 |
-| `tokens.test.ts` | usage | M1 |
-| `abort.test.ts` | AbortSignal | #291 |
+| `tokens.test.ts` | usage | M1 + #291 P1 |
+| `abort.test.ts` | AbortSignal | M3 + #291 P0 |
 | `context-overflow.test.ts` | overflow リライト | M3 |
 | `tool-call-without-result.test.ts` | ツールシーケンス | M2 |
 
@@ -86,17 +57,11 @@ modular-prompt-pi-provider/
 | テスト | 内容 |
 |---|---|
 | `message-mapper.test.ts` | Pi ↔ MessageElement |
+| `usage.test.ts` | `QueryResult` → Pi `Usage` |
 | `incremental-parser.test.ts` | thinking タグ分割 |
-| `options.test.ts` | reasoning マッピング |
+| `options.test.ts` | reasoning / signal マッピング |
 
 ユニットテストは vitest。MLX 統合は手動 + Pi セッション。
-
-## 既知の依存関係
-
-| ブロッカー | 影響 | 回避 |
-|---|---|---|
-| [#291](https://github.com/otolab/modular-prompt/issues/291) AbortSignal | `abort.test.ts` | クライアント側打ち切りのみ |
-| [#254](https://github.com/otolab/modular-prompt/issues/254) MLX ハング | セッション不安定 | abort 実装時に整合確認 |
 
 ## ステータス
 

@@ -44,17 +44,19 @@ Pi は [jiti](https://github.com/unjs/jiti) で TypeScript を直接ロードす
 
 ## ドキュメント
 
-詳細は [docs/](./docs/) を参照。
+詳細は [docs/](./docs/) を参照。まず [scope.md](./docs/scope.md)。
 
 | 文書 | 内容 |
 |------|------|
+| [scope](./docs/scope.md) | 実装スコープ（driver 要求 / 本リポジトリ） |
 | [architecture](./docs/architecture.md) | 全体構成・責務分担 |
 | [pi-apis](./docs/pi-apis.md) | Pi 拡張 API（イベント含む） |
 | [modular-prompt-apis](./docs/modular-prompt-apis.md) | driver 消費 API |
 | [adapter](./docs/adapter.md) | 型変換 |
 | [streaming](./docs/streaming.md) | 増分パーサ |
+| [abort-spec](./docs/abort-spec.md) | AbortSignal 要求仕様 |
 | [compaction](./docs/compaction.md) | compact・overflow |
-| [implementation-plan](./docs/implementation-plan.md) | 優先度・マイルストーン |
+| [implementation-plan](./docs/implementation-plan.md) | ファイル構成・テスト |
 | [distribution](./docs/distribution.md) | 配布・npm |
 
 ## 関連
