@@ -24,7 +24,7 @@
 - [Pi packages.md](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md)
 - [Pi compaction.md](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/compaction.md)
 - [modular-prompt DRIVER_API](https://github.com/otolab/modular-prompt/blob/main/docs/DRIVER_API.md)
-- [modular-prompt#291](https://github.com/otolab/modular-prompt/issues/291) — AbortSignal 等ドライバ側課題
+- [modular-prompt#291](https://github.com/otolab/modular-prompt/issues/291) — driver 0.14.0 で対応済み（signal / usage）
 
 ## 調査メモ（my-logs）
 
