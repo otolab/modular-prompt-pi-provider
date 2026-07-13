@@ -172,8 +172,8 @@ abort 時は `result` に載った usage をそのまま使う。driver 0.14.0+ 
 [streaming.md](./streaming.md) 参照。疑似コード:
 
 ```typescript
-async function bridgeMlxStreamToPi(
-  driver: MlxDriver,
+async function bridgeDriverStreamToPi(
+  driver: AIDriver,
   model: Model,
   context: Context,
   options: SimpleStreamOptions | undefined,

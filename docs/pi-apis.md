@@ -83,7 +83,7 @@ interface Context {
 |---|---|
 | `temperature`, `maxTokens` | `QueryOptions` へ |
 | `reasoning` | `mode` / `reasoningEffort` へ |
-| `signal` | MLX abort（#291 待ち） |
+| `signal` | MLX abort（driver 0.14.0+） |
 | `sessionId`, `cacheRetention` | 将来: `MlxCacheController` 連携 |
 | `onPayload`, `onResponse` | HTTP 用。MLX 直結では未使用 |
 
@@ -94,7 +94,7 @@ interface Context {
 | イベント | 用途 | 優先度 |
 |---|---|---|
 | **`session_start`** | ドライバプール初期化のトリガ | P1 |
-| **`session_shutdown`** | `MlxDriver.close()` | P1 |
+| **`session_shutdown`** | `AIDriver.close()`（プール経由） | P1 |
 | **`message_end`** | overflow エラーの `errorMessage` リライト | P2 |
 | **`session_before_compact`** | **カスタム compact 要約**（専用 Prompt） | P1 |
 | `session_compact` | compact 完了ログ・メトリクス | P3 |

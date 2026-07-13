@@ -38,9 +38,18 @@ pi install -l git:github.com/otolab/modular-prompt-pi-provider@main
 ```bash
 npm install
 npm run typecheck
+npm run test:run   # ユニットテスト（MLX 非起動・逐次実行）
 ```
 
 Pi は [jiti](https://github.com/unjs/jiti) で TypeScript を直接ロードするため、ビルドは必須ではない。
+
+### モデル差し替え（開発時）
+
+```bash
+export MODULAR_PROMPT_PI_MODEL=mlx-community/gemma-4-26B-A4B-it-heretic-4bit
+```
+
+デフォルトは上記モデル。`src/config.ts` の `ApplicationConfig.models` で複数登録も可能。
 
 ## ドキュメント
 
@@ -67,4 +76,4 @@ Pi は [jiti](https://github.com/unjs/jiti) で TypeScript を直接ロードす
 
 ## ステータス
 
-🚧 **M1 着手** — P0 実装中（[scope](./docs/scope.md) / [implementation-plan](./docs/implementation-plan.md)）。
+🚧 **M1 検証残** — P0 コード・ユニットテスト完了。`pi install` 実機確認と Pi 公式テストが残り（[scope](./docs/scope.md) / [implementation-plan](./docs/implementation-plan.md)）。
