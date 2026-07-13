@@ -104,8 +104,9 @@ function piOptionsToQueryOptions(
     }
   }
 
-  // signal: #291 実装後
-  // if (options?.signal) q.signal = options.signal;
+  if (options?.signal) {
+    q.signal = options.signal;
+  }
 
   return q;
 }
@@ -115,12 +116,13 @@ function piOptionsToQueryOptions(
 
 ## finishReason マッピング
 
-| `QueryResult.finishReason` | Pi `stopReason` | `done.reason` |
-|---|---|---|
-| `'stop'` | `"stop"` | `"stop"` |
-| `'length'` | `"length"` | `"length"` |
-| `'tool_calls'` | `"toolUse"` | `"toolUse"` |
-| `'error'` | `"error"` | — (`error` イベント) |
+| `QueryResult.finishReason` | 条件 | Pi `stopReason` | 終了イベント |
+|---|---|---|---|
+| `'stop'` | | `"stop"` | `done` |
+| `'length'` | | `"length"` | `done` |
+| `'tool_calls'` | | `"toolUse"` | `done` |
+| `'error'` | `signal.aborted` | `"aborted"` | `error` (`reason: "aborted"`) |
+| `'error'` | それ以外 | `"error"` | `error` |
 
 ## usage マッピング
 
@@ -154,7 +156,9 @@ function mapQueryResultUsageToPi(
 
 driver の `stream` には usage がない。`await result` で得たあと、`done` / `error` を push する直前に `output.usage` を上書きする。それ以前の `partial` は 0 のままでよい。
 
-abort 時は `result` に載った usage をそのまま使う（driver が返せる範囲）。#291 P0 前はクライアント側打ち切りのみで、usage は空になりうる。
+abort 時は `result` に載った usage をそのまま使う。driver 0.14.0+ の MLX は meta から `usage` を返す。
+
+**注意**: driver の `totalTokens` は `promptTokens + completionTokens` のみ。Pi の `totalTokens` は本拡張で `input + output + cacheRead + cacheWrite` とする（`result.usage.totalTokens` をそのまま使わない）。
 
 | driver `result.usage` | Pi `Usage` |
 |---|---|
@@ -189,14 +193,22 @@ async function bridgeMlxStreamToPi(
     const parser = createIncrementalParser(output, piStream);
 
     for await (const chunk of stream) {
-      if (options?.signal?.aborted) { /* abort 処理 */ break; }
+      if (options?.signal?.aborted) break;
       parser.push(chunk);
     }
 
     const final = await result;
     output.usage = mapQueryResultUsageToPi(final, model);
     parser.finalizeFromResult(final);
-    // done / error
+
+    if (options?.signal?.aborted) {
+      piStream.push({ type: "error", reason: "aborted", error: output });
+    } else if (final.finishReason === "error") {
+      piStream.push({ type: "error", reason: "error", error: output });
+    } else {
+      piStream.push({ type: "done", reason: mapStopReason(final.finishReason), message: output });
+    }
+    piStream.end();
   } catch (e) {
     // error イベント
   }

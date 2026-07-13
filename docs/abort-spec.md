@@ -129,9 +129,9 @@ for await (const chunk of stream) {
 }
 ```
 
-## driver 側の要求
+## driver 側
 
-[scope.md](./scope.md) / [modular-prompt#291](https://github.com/otolab/modular-prompt/issues/291#issuecomment-4933631155) を参照。本拡張は `options.signal` を `QueryOptions` に渡し、`finishReason: 'error'` + `signal.aborted` を Pi の `"aborted"` に変換する。
+[modular-prompt#291](https://github.com/otolab/modular-prompt/issues/291) は `@modular-prompt/driver` 0.14.0 で対応済み。本拡張は `signal` 伝播と Pi 向け変換を実装する。
 
 ## 実装チェックリスト（本拡張）
 
@@ -140,4 +140,4 @@ for await (const chunk of stream) {
 - [ ] `error` イベント `reason: "aborted"` で終了
 - [ ] `result()` resolve（reject しない）
 - [ ] キャンセル後の次ターンが動作
-- [ ] driver `signal` 連携（#291 マージ後）
+- [x] driver `signal` 連携（driver 0.14.0+）

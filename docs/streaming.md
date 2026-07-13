@@ -99,4 +99,4 @@ if (!parser.emittedToolCalls && final.toolCalls?.length) {
 
 `options.signal` の要求仕様は [abort-spec.md](./abort-spec.md) を参照。
 
-要点: キャンセル時は `stopReason: "aborted"`、部分 content 保持、MLX 推論の実停止は [#291](https://github.com/otolab/modular-prompt/issues/291)。
+要点: キャンセル時は `stopReason: "aborted"`、部分 content 保持。driver は `signal` で推論停止（0.14.0+）。本拡張は [abort-spec.md](./abort-spec.md) に従い Pi イベントへ変換する。

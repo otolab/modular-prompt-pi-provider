@@ -15,11 +15,11 @@ modular-prompt-pi-provider/
       context-to-prompt.ts
       message-mapper.ts
       tools.ts
-      options.ts
+      options.ts             # signal 伝播含む
       usage.ts               # QueryResult → Pi Usage
       stream-bridge.ts
       incremental-parser.ts
-      finish-reason.ts
+      finish-reason.ts       # error + signal.aborted → aborted
     driver/
       pool.ts                # MlxDriver インスタンス管理
       discovery.ts           # getCapabilities → ProviderModelConfig
@@ -33,36 +33,51 @@ modular-prompt-pi-provider/
 
 ## 優先度（本リポジトリ）
 
-[scope.md](./scope.md) と同一。実装順の目安:
+[scope.md](./scope.md) と同一。実装順:
 
-1. **P0** — `stream-simple` + adapter + usage マッピング
-2. **P1** — ツール、discovery、セッション、#291 後に signal
+1. **P0** — `stream-simple` + adapter（context / options / usage / finish-reason / stream-bridge）
+2. **P1** — ツール、discovery、セッション
 3. **P2** — 増分パーサ、overflow
 4. **P3** — context 剪定
+
+### P0 実装タスク（M1）
+
+| ファイル | 内容 |
+|---|---|
+| `constants.ts` | `PROVIDER_ID`, `API_ID` |
+| `adapter/context-to-prompt.ts` | `piContextToCompiledPrompt` |
+| `adapter/message-mapper.ts` | Pi `Message` → `MessageElement` |
+| `adapter/options.ts` | `piOptionsToQueryOptions`（`signal` 含む） |
+| `adapter/usage.ts` | `mapQueryResultUsageToPi` |
+| `adapter/finish-reason.ts` | `mapStopReason`, abort 判定 |
+| `adapter/stream-bridge.ts` | MLX stream → Pi イベント |
+| `stream-simple.ts` | `registerProvider` + `streamSimple` |
+| `driver/pool.ts` | `MlxDriver` 遅延初期化 |
 
 ## テスト
 
 ### Pi 公式（`@earendil-works/pi-ai`）
 
-| テスト | 内容 | 依存 |
+| テスト | 内容 | タイミング |
 |---|---|---|
 | `stream.test.ts` | イベント順序 | M1 |
-| `tokens.test.ts` | usage | M1 + #291 P1 |
-| `abort.test.ts` | AbortSignal | M3 + #291 P0 |
-| `context-overflow.test.ts` | overflow リライト | M3 |
+| `tokens.test.ts` | usage | M1 |
+| `abort.test.ts` | AbortSignal | M1（driver 0.14.0+ 前提） |
 | `tool-call-without-result.test.ts` | ツールシーケンス | M2 |
+| `context-overflow.test.ts` | overflow リライト | M3 |
 
 ### 本リポジトリ（予定）
 
 | テスト | 内容 |
 |---|---|
+| `usage.test.ts` | `mapQueryResultUsageToPi`（`input` 計算、cache 系） |
+| `finish-reason.test.ts` | abort / error 判定 |
+| `options.test.ts` | `signal` / reasoning マッピング |
 | `message-mapper.test.ts` | Pi ↔ MessageElement |
-| `usage.test.ts` | `QueryResult` → Pi `Usage` |
 | `incremental-parser.test.ts` | thinking タグ分割 |
-| `options.test.ts` | reasoning / signal マッピング |
 
 ユニットテストは vitest。MLX 統合は手動 + Pi セッション。
 
 ## ステータス
 
-現在: **M0（スケルトン）** — `src/index.ts` にスタブのみ。
+**M1 着手** — driver 0.14.0+ 前提で P0 実装中。`src/index.ts` はスタブのまま。

@@ -61,10 +61,10 @@ Pi は [jiti](https://github.com/unjs/jiti) で TypeScript を直接ロードす
 
 ## 関連
 
-- [modular-prompt](https://github.com/otolab/modular-prompt) — MLX ドライバ本体
-- [modular-prompt#291](https://github.com/otolab/modular-prompt/issues/291) — AbortSignal 等ドライバ側課題
+- [modular-prompt](https://github.com/otolab/modular-prompt) — MLX ドライバ本体（**driver 0.14.0+** 必須）
+- [modular-prompt#291](https://github.com/otolab/modular-prompt/issues/291) — driver 側対応（完了）
 - [Pi custom provider](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/custom-provider.md)
 
 ## ステータス
 
-🚧 スケルトンのみ。`streamSimple` 実装は未着手（[implementation-plan](./docs/implementation-plan.md)）。
+🚧 **M1 着手** — P0 実装中（[scope](./docs/scope.md) / [implementation-plan](./docs/implementation-plan.md)）。
