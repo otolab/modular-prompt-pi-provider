@@ -11,22 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # package.json の file:../modular-prompt/packages/experiment 用
-      - uses: actions/checkout@v4
-        with:
-          repository: otolab/modular-prompt
-          path: modular-prompt
-
-      - name: Link modular-prompt sibling path
-        run: ln -s "$GITHUB_WORKSPACE/modular-prompt" "$(dirname "$GITHUB_WORKSPACE")/modular-prompt"
-
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Typecheck
         run: npm run typecheck

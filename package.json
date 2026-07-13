@@ -24,21 +24,20 @@
     "test:run": "vitest run"
   },
   "dependencies": {
-    "@modular-prompt/driver": "^0.14.0"
+    "@modular-prompt/driver": "0.14.0"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-ai": "0.80.6",
+    "@earendil-works/pi-coding-agent": "0.80.6"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*",
-    "typescript": "^5.9.0",
-    "@modular-prompt/experiment": "file:../modular-prompt/packages/experiment",
+    "@earendil-works/pi-ai": "0.80.6",
+    "@earendil-works/pi-coding-agent": "0.80.6",
+    "typescript": "5.9.3",
     "vitest": "3.2.4"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=24.0.0"
   },
   "license": "MIT",
   "repository": {
