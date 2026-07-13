@@ -1,27 +1,29 @@
 import type { Api, Model, SimpleStreamOptions } from "@earendil-works/pi-ai";
 import type { QueryOptions } from "@modular-prompt/driver";
 
+/**
+ * Pi SimpleStreamOptions → driver QueryOptions。
+ *
+ * DRIVER_API / driver-usage スキルに掲載のフィールドのみ使う:
+ * - `stream`, `temperature`, `maxTokens`, `signal`, `reasoningEffort`
+ * - `mode` は指定しない（MLX は apiStrategy auto + chat template で API 選択）
+ */
 export function piOptionsToQueryOptions(
   options: SimpleStreamOptions | undefined,
   _model: Model<Api>,
 ): QueryOptions {
-  const query: QueryOptions = {
+  const reasoningEffort =
+    options?.reasoning === "low" ||
+    options?.reasoning === "medium" ||
+    options?.reasoning === "high"
+      ? options.reasoning
+      : undefined;
+
+  return {
     stream: true,
     temperature: options?.temperature,
     maxTokens: options?.maxTokens,
+    reasoningEffort,
+    signal: options?.signal,
   };
-
-  const level = options?.reasoning;
-  if (level) {
-    query.mode = "thinking";
-    if (level === "low" || level === "medium" || level === "high") {
-      query.reasoningEffort = level;
-    }
-  }
-
-  if (options?.signal) {
-    query.signal = options.signal;
-  }
-
-  return query;
 }

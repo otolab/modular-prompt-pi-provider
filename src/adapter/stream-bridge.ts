@@ -15,6 +15,8 @@ import {
   getTextBlock,
 } from "./message-mapper.js";
 import { piOptionsToQueryOptions } from "./options.js";
+import { emitToolCallsFromResult } from "./toolcall-emitter.js";
+import { piToolsToToolDefinitions } from "./tools.js";
 import { mapQueryResultUsageToPi } from "./usage.js";
 
 export async function bridgeDriverStreamToPi(
@@ -36,7 +38,15 @@ export async function bridgeDriverStreamToPi(
 
     const driver = await getDriverForModel(model.id);
     const prompt = piContextToCompiledPrompt(context);
-    const queryOpts = piOptionsToQueryOptions(options, model);
+    const queryOpts = {
+      ...piOptionsToQueryOptions(options, model),
+      ...(context.tools?.length
+        ? {
+            tools: piToolsToToolDefinitions(context.tools),
+            toolChoice: "auto" as const,
+          }
+        : {}),
+    };
 
     const { stream, result } = await driver.streamQuery(prompt, queryOpts);
 
@@ -62,14 +72,20 @@ export async function bridgeDriverStreamToPi(
     const final = await result;
     output.usage = mapQueryResultUsageToPi(final, model);
 
+    const cleanedText = final.content ?? "";
     const textBlock = getTextBlock(output, textIndex);
     if (textBlock) {
+      textBlock.text = cleanedText;
       piStream.push({
         type: "text_end",
         contentIndex: textIndex,
-        content: textBlock.text,
+        content: cleanedText,
         partial: output,
       });
+    }
+
+    if (final.toolCalls?.length) {
+      emitToolCallsFromResult(final.toolCalls, output, piStream);
     }
 
     const termination = resolveStreamTermination(final, options?.signal);

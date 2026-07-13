@@ -1,4 +1,5 @@
 import type { ApplicationConfig, ModelSpec } from "@modular-prompt/driver";
+import { pickMlxDriverDefaultOptions } from "./driver/mlx-options.js";
 
 /** 環境変数 `MODULAR_PROMPT_PI_MODEL` で上書き可能 */
 export const DEFAULT_MLX_MODEL =
@@ -6,6 +7,10 @@ export const DEFAULT_MLX_MODEL =
   "mlx-community/gemma-4-26B-A4B-it-heretic-4bit";
 
 function buildDefaultModelSpec(model: string): ModelSpec {
+  const defaultOptions = pickMlxDriverDefaultOptions({
+    maxTokens: 8_192,
+  });
+
   return {
     model,
     provider: "mlx",
@@ -13,19 +18,16 @@ function buildDefaultModelSpec(model: string): ModelSpec {
       "streaming",
       "local",
       "multilingual",
+      "japanese",
       "chat",
       "tools",
       "reasoning",
-      "vision",
       "function-calling",
     ],
     maxInputTokens: 128_000,
     maxOutputTokens: 8_192,
     priority: 10,
-    defaultOptions: {
-      mode: "chat",
-      maxTokens: 8_192,
-    },
+    ...(defaultOptions ? { defaultOptions } : {}),
   };
 }
 

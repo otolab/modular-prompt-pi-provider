@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { piOptionsToQueryOptions } from "../src/adapter/options.js";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import type { QueryResult } from "@modular-prompt/driver";
 
 const model = {
   id: "test-model",
@@ -10,7 +9,7 @@ const model = {
 } as Model<Api>;
 
 describe("piOptionsToQueryOptions", () => {
-  it("sets stream true and maps temperature / maxTokens", () => {
+  it("sets stream and maps temperature / maxTokens", () => {
     expect(
       piOptionsToQueryOptions({ temperature: 0.5, maxTokens: 100 }, model),
     ).toEqual({
@@ -20,10 +19,9 @@ describe("piOptionsToQueryOptions", () => {
     });
   });
 
-  it("maps reasoning to thinking mode", () => {
+  it("maps reasoning to reasoningEffort (not mode)", () => {
     expect(piOptionsToQueryOptions({ reasoning: "high" }, model)).toEqual({
       stream: true,
-      mode: "thinking",
       reasoningEffort: "high",
     });
   });
@@ -32,5 +30,6 @@ describe("piOptionsToQueryOptions", () => {
     const controller = new AbortController();
     const opts = piOptionsToQueryOptions({ signal: controller.signal }, model);
     expect(opts.signal).toBe(controller.signal);
+    expect(opts).not.toHaveProperty("mode");
   });
 });

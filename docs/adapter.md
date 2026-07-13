@@ -85,32 +85,38 @@ function piToolsToToolDefinitions(tools: Tool[]): ToolDefinition[] {
 
 ## `SimpleStreamOptions` → `QueryOptions`
 
+modular-prompt では **2 層** に分かれる（混同しないこと）:
+
+| 層 | 用途 | 例 |
+|---|---|---|
+| `ModelSpec.defaultOptions` | `MlxDriver.defaultOptions` → **Python 生成パラメータ** | `maxTokens`, `temperature`, `topP` |
+| `QueryOptions`（`streamQuery` 引数） | 実行時オプション | `reasoningEffort`, `stream`, `signal` |
+
+`mode` は **指定しない**（MLX は apiStrategy auto + chat template で API 選択）。Pi の `reasoning` は `reasoningEffort` にマップする。
+
 ```typescript
 function piOptionsToQueryOptions(
   options: SimpleStreamOptions | undefined,
   model: Model,
 ): QueryOptions {
-  const q: QueryOptions = {
+  const reasoningEffort =
+    options?.reasoning === "low" ||
+    options?.reasoning === "medium" ||
+    options?.reasoning === "high"
+      ? options.reasoning
+      : undefined;
+
+  return {
     stream: true,
     temperature: options?.temperature,
     maxTokens: options?.maxTokens,
+    reasoningEffort,
+    signal: options?.signal,
   };
-
-  const level = options?.reasoning ?? "off";
-  if (level !== "off") {
-    q.mode = "thinking";
-    if (level === "low" || level === "medium" || level === "high") {
-      q.reasoningEffort = level;
-    }
-  }
-
-  if (options?.signal) {
-    q.signal = options.signal;
-  }
-
-  return q;
 }
 ```
+
+`ModelSpec.defaultOptions` に `mode` を入れないこと（`pickMlxDriverDefaultOptions` でフィルタ）。実装は `src/driver/mlx-options.ts`。
 
 `Context.tools` は `streamQuery` 呼び出し時に別途 `tools: piToolsToToolDefinitions(context.tools)` で渡す。
 

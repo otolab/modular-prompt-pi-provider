@@ -31,6 +31,8 @@ export default async function (pi: ExtensionAPI): Promise<void> {
 ```typescript
 pi.registerProvider("modular-prompt-mlx", {
   name: "Modular Prompt MLX",
+  baseUrl: "local://modular-prompt-mlx",  // Pi 必須。streamSimple では未使用
+  apiKey: "local",                        // Pi 必須。streamSimple では未使用
   api: "modular-prompt-mlx",
   streamSimple: streamModularPromptMlx,
   models: ProviderModelConfig[],
@@ -41,8 +43,9 @@ pi.registerProvider("modular-prompt-mlx", {
 |---|---|---|
 | `api` | ✅ | 独自 ID |
 | `streamSimple` | ✅ | 通信本体 |
-| `models` | ✅ | `getCapabilities()` から構築 |
-| `baseUrl` / `apiKey` / `headers` | ❌ | HTTP 不要 |
+| `models` | ✅ | `ApplicationConfig` から構築 |
+| `baseUrl` / `apiKey` | ✅（Pi 検証） | HTTP には使わないプレースホルダー |
+| `headers` | ❌ | HTTP 不要 |
 | `oauth` | ❌ | ローカル |
 | `compat`（モデル側） | 任意 | Qwen 等は driver 側 `QueryOptions` に寄せる |
 
@@ -82,7 +85,7 @@ interface Context {
 | フィールド | アダプタでの扱い |
 |---|---|
 | `temperature`, `maxTokens` | `QueryOptions` へ |
-| `reasoning` | `mode` / `reasoningEffort` へ |
+| `reasoning` | `reasoningEffort` へ |
 | `signal` | MLX abort（driver 0.14.0+） |
 | `sessionId`, `cacheRetention` | 将来: `MlxCacheController` 連携 |
 | `onPayload`, `onResponse` | HTTP 用。MLX 直結では未使用 |
