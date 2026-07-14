@@ -12,32 +12,17 @@ export const DEFAULT_LOGGING_POLICY: LoggingPolicy = {
   dir: "",
 };
 
-export function isDebugLoggingEnv(env: NodeJS.ProcessEnv = process.env): boolean {
-  const value = env.MODULAR_PROMPT_PI_DEBUG;
-  return value === "1" || value === "true" || value === "yes";
-}
-
 export function resolveLoggingPolicy(
   yaml: PiProviderYamlConfig["logging"] | undefined,
-  options: { defaultDir: string; debugEnv?: boolean },
+  options: { defaultDir: string },
 ): LoggingPolicy {
-  const debug = options.debugEnv ?? isDebugLoggingEnv();
-  const yamlLevel = yaml?.requestResponseLevel;
-
-  let requestResponseLevel: RequestResponseLevel;
-  if (yamlLevel) {
-    requestResponseLevel = yamlLevel;
-  } else if (yaml) {
-    requestResponseLevel = debug ? "full" : "minimal";
-  } else if (debug) {
-    requestResponseLevel = "full";
-  } else {
-    requestResponseLevel = "none";
+  if (!yaml) {
+    return DEFAULT_LOGGING_POLICY;
   }
 
   return {
-    requestResponseLevel,
-    dir: yaml?.dir ?? options.defaultDir,
+    requestResponseLevel: yaml.requestResponseLevel ?? "minimal",
+    dir: yaml.dir ?? options.defaultDir,
   };
 }
 

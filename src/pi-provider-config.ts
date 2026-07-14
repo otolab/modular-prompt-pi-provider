@@ -3,7 +3,6 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parse as parseYaml } from "yaml";
-import { isDebugLoggingEnv } from "./logging/log-policy.js";
 
 /** Pi プラグインのディレクトリ名（プロバイダ ID と一致） */
 export const PLUGIN_DIR_NAME = "modular-prompt-provider";
@@ -252,8 +251,7 @@ function applyLoggingDefaults(
   config: PiProviderYamlConfig,
   scope: { cwd: string; isProjectTrusted: boolean; usedProjectConfig: boolean },
 ): PiProviderYamlConfig {
-  const debug = isDebugLoggingEnv();
-  if (!config.logging && !debug) {
+  if (!config.logging) {
     return config;
   }
 
@@ -261,10 +259,9 @@ function applyLoggingDefaults(
   return {
     ...config,
     logging: {
-      level: config.logging?.level ?? "info",
-      requestResponseLevel:
-        config.logging?.requestResponseLevel ?? (debug ? "full" : "minimal"),
-      dir: config.logging?.dir ?? defaultDir,
+      level: config.logging.level ?? "info",
+      requestResponseLevel: config.logging.requestResponseLevel ?? "minimal",
+      dir: config.logging.dir ?? defaultDir,
     },
   };
 }

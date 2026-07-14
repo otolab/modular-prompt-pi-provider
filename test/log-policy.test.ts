@@ -1,18 +1,11 @@
-import { describe, expect, it, afterEach } from "vitest";
-import {
-  isDebugLoggingEnv,
-  resolveLoggingPolicy,
-} from "../src/logging/log-policy.js";
+import { describe, expect, it } from "vitest";
+import { resolveLoggingPolicy } from "../src/logging/log-policy.js";
 
 describe("resolveLoggingPolicy", () => {
-  afterEach(() => {
-    delete process.env.MODULAR_PROMPT_PI_DEBUG;
-  });
-
-  it("未指定時は none", () => {
+  it("logging 未指定時は none", () => {
     expect(resolveLoggingPolicy(undefined, { defaultDir: "/tmp/logs" })).toEqual({
       requestResponseLevel: "none",
-      dir: "/tmp/logs",
+      dir: "",
     });
   });
 
@@ -28,17 +21,7 @@ describe("resolveLoggingPolicy", () => {
     });
   });
 
-  it("MODULAR_PROMPT_PI_DEBUG で full", () => {
-    process.env.MODULAR_PROMPT_PI_DEBUG = "1";
-    expect(
-      resolveLoggingPolicy(undefined, { defaultDir: "/tmp/logs", debugEnv: true }),
-    ).toEqual({
-      requestResponseLevel: "full",
-      dir: "/tmp/logs",
-    });
-  });
-
-  it("logging セクションのみで minimal", () => {
+  it("logging セクションのみで minimal と default dir", () => {
     expect(
       resolveLoggingPolicy({ level: "info" }, { defaultDir: "/tmp/logs" }),
     ).toEqual({
@@ -46,17 +29,16 @@ describe("resolveLoggingPolicy", () => {
       dir: "/tmp/logs",
     });
   });
-});
 
-describe("isDebugLoggingEnv", () => {
-  afterEach(() => {
-    delete process.env.MODULAR_PROMPT_PI_DEBUG;
-  });
-
-  it("1 / true / yes を認識する", () => {
-    process.env.MODULAR_PROMPT_PI_DEBUG = "1";
-    expect(isDebugLoggingEnv()).toBe(true);
-    process.env.MODULAR_PROMPT_PI_DEBUG = "true";
-    expect(isDebugLoggingEnv()).toBe(true);
+  it("requestResponseLevel none は無効", () => {
+    expect(
+      resolveLoggingPolicy(
+        { requestResponseLevel: "none", dir: "/tmp/logs" },
+        { defaultDir: "/fallback" },
+      ),
+    ).toEqual({
+      requestResponseLevel: "none",
+      dir: "/tmp/logs",
+    });
   });
 });

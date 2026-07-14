@@ -34,10 +34,6 @@ async function main(): Promise<void> {
     }
   }
 
-  if (process.env.MODULAR_PROMPT_PI_LOG_DIR) {
-    dir = process.env.MODULAR_PROMPT_PI_LOG_DIR;
-  }
-
   if (cmd === "summary") {
     const summaries = await summarizeLogs(dir);
     console.log(formatSummaryTable(summaries));

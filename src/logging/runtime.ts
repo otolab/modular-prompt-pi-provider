@@ -3,7 +3,6 @@ import type { CacheCleanResult } from "../cache/cache-manager.js";
 import { ProcessLogger } from "./process-logger.js";
 import {
   DEFAULT_LOGGING_POLICY,
-  isDebugLoggingEnv,
   isLoggingEnabled,
   resolveLoggingPolicy,
   type LoggingPolicy,
@@ -19,7 +18,6 @@ export function initLoggingRuntime(
 ): void {
   policy = resolveLoggingPolicy(yaml?.logging, {
     defaultDir: defaultLogDir,
-    debugEnv: isDebugLoggingEnv(),
   });
   processLogger = isLoggingEnabled(policy) ? new ProcessLogger(policy) : undefined;
 }
