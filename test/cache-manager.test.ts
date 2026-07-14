@@ -124,6 +124,40 @@ describe("CacheManager", () => {
     expect(result.kept).toBe(1);
   });
 
+  it("minFreeDiskGb 未満なら古いエントリから削除する", async () => {
+    await writeIndex(cacheDir, {
+      version: 1,
+      entries: [
+        {
+          key: "older",
+          model: "m1",
+          createdAt: daysAgo(2),
+        },
+        {
+          key: "newer",
+          model: "m1",
+          createdAt: daysAgo(0),
+        },
+      ],
+    });
+    await writeEntry(cacheDir, "older", 2 * 1024 * 1024);
+    await writeEntry(cacheDir, "newer", 2 * 1024 * 1024);
+
+    vi.mocked(diskUsage.getFreeDiskBytes).mockResolvedValue(0);
+
+    const manager = new CacheManager(cacheDir, {
+      ...TEST_POLICY,
+      maxSizeGb: 100,
+      // 2 MiB 分の解放で閾値を満たす（0.002 GiB だと 2 件とも削除される）
+      minFreeDiskGb: 0.00191,
+    });
+    const result = await manager.clean();
+
+    expect(result.deleted).toHaveLength(1);
+    expect(result.deleted[0]).toMatchObject({ key: "older", reason: "disk" });
+    expect(result.kept).toBe(1);
+  });
+
   it("maxSizeGb 超過時は古いエントリから削除する", async () => {
     await writeIndex(cacheDir, {
       version: 1,

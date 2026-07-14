@@ -16,7 +16,7 @@ function formatShowOutput(
       ];
       for (const entry of summary.entries) {
         lines.push(
-          `  - ${entry.key.slice(0, 12)}… model=${entry.model} age=${entry.createdAt} size=${entry.sizeMb} MB hint=${entry.hint}`,
+          `  - ${entry.key.slice(0, 12)}… model=${entry.model} created=${entry.createdAt} size=${entry.sizeMb} MB hint=${entry.hint}`,
         );
       }
       return lines.join("\n");

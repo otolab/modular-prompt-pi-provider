@@ -140,7 +140,7 @@ modular-prompt-pi-provider/
 | `test/config.test.ts` | モデル登録・デフォルト | ✅ |
 | `test/cache-options.test.ts` | `QueryOptions.cache` マッピング | ✅ |
 | `test/cache-policy.test.ts` | `resolveCachePolicy` | ✅ |
-| `test/cache-manager.test.ts` | eviction（release / age / size / orphan） | ✅ |
+| `test/cache-manager.test.ts` | eviction（release / age / size / disk / orphan） | ✅ |
 | `test/cache-runtime.test.ts` | startup / before-write sweep 配線 | ✅ |
 | `test/stream-events.test.ts` | ストリーム契約（TestDriver） | ✅ |
 | `tests/integration/cache-hit.test.ts` | MLX KV キャッシュ（実機） | ✅ |

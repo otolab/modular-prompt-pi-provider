@@ -141,6 +141,7 @@ logging:
 |---|---|---|
 | 設定ロード後（起動・`session_start`） | `sweepOnStartup` | 全 `cacheDir` を sweep |
 | 新規キャッシュ書き込み前 | `sweepBeforeWrite` | 当該 `cacheDir` を sweep |
+| `session_shutdown` / モデル切替（`pool.close`） | — | driver `close()` が `hint: release` にしたエントリを次回 sweep で削除（sessionId スコープの `release()` は [#30](https://github.com/otolab/modular-prompt-pi-provider/issues/30) Phase 3 予定） |
 | Pi コマンド | — | `/cache show` / `/cache clean [--dry-run]` |
 
 eviction 結果は `console.info` に `[cache:startup]` 等のプレフィックスで出力する（[#42](https://github.com/otolab/modular-prompt-pi-provider/issues/42) で JSONL 化予定）。
