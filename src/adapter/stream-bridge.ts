@@ -6,7 +6,10 @@ import type {
   SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
 import { isAborted } from "@modular-prompt/driver";
+import { modelHasCacheDir } from "../config.js";
 import { getDriverForModel } from "../driver/pool.js";
+import { getApplicationConfig } from "../driver/service.js";
+import { setActiveStreamSessionId } from "../cache/session-context.js";
 import { piContextToCompiledPrompt } from "./context-to-prompt.js";
 import { resolveStreamTermination } from "./finish-reason.js";
 import {
@@ -38,8 +41,10 @@ export async function bridgeDriverStreamToPi(
 
     const driver = await getDriverForModel(model.id);
     const prompt = piContextToCompiledPrompt(context);
+    const hasCacheDir = modelHasCacheDir(getApplicationConfig(), model.id);
+    setActiveStreamSessionId(options?.sessionId);
     const queryOpts = {
-      ...piOptionsToQueryOptions(options, model),
+      ...piOptionsToQueryOptions(options, model, hasCacheDir),
       ...(context.tools?.length
         ? {
             tools: piToolsToToolDefinitions(context.tools),

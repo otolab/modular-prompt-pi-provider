@@ -16,6 +16,7 @@ describe("piOptionsToQueryOptions", () => {
       stream: true,
       temperature: 0.5,
       maxTokens: 100,
+      cache: false,
     });
   });
 
@@ -23,6 +24,7 @@ describe("piOptionsToQueryOptions", () => {
     expect(piOptionsToQueryOptions({ reasoning: "high" }, model)).toEqual({
       stream: true,
       reasoningEffort: "high",
+      cache: false,
     });
   });
 
@@ -31,5 +33,22 @@ describe("piOptionsToQueryOptions", () => {
     const opts = piOptionsToQueryOptions({ signal: controller.signal }, model);
     expect(opts.signal).toBe(controller.signal);
     expect(opts).not.toHaveProperty("mode");
+    expect(opts.cache).toBe(false);
+  });
+
+  it("cacheDir 有効時は cache true、none で false、read-only を渡す", () => {
+    expect(
+      piOptionsToQueryOptions({ sessionId: "s1" }, model, true).cache,
+    ).toBe(true);
+    expect(
+      piOptionsToQueryOptions({ cacheRetention: "none" }, model, true).cache,
+    ).toBe(false);
+    expect(
+      piOptionsToQueryOptions(
+        { metadata: { cache: "read-only" } },
+        model,
+        true,
+      ).cache,
+    ).toBe("read-only");
   });
 });
