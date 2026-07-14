@@ -37,6 +37,12 @@ modular-prompt-pi-provider/
     hooks/
       session.ts             ✅（session_shutdown → close）
       cache-commands.ts      ✅（/cache show | clean）
+    logging/
+      log-policy.ts          ✅（#42: YAML logging セクション）
+      request-logger.ts      ✅（リクエスト JSONL）
+      process-logger.ts      ✅（eviction 等）
+      runtime.ts             ✅
+      extract-log.ts         ✅（summary / show）
     driver/
       service.ts             # AIService シングルトン ✅
       pool.ts                # AIDriver 単一保持・切替 ✅
@@ -142,6 +148,8 @@ modular-prompt-pi-provider/
 | `test/cache-policy.test.ts` | `resolveCachePolicy` | ✅ |
 | `test/cache-manager.test.ts` | eviction（release / age / size / disk / orphan） | ✅ |
 | `test/cache-runtime.test.ts` | startup / before-write sweep 配線 | ✅ |
+| `test/log-policy.test.ts` | `resolveLoggingPolicy` | ✅ |
+| `test/request-logger.test.ts` | JSONL 記録 | ✅ |
 | `test/stream-events.test.ts` | ストリーム契約（TestDriver） | ✅ |
 | `tests/integration/cache-hit.test.ts` | MLX KV キャッシュ（実機） | ✅ |
 | `incremental-parser.test.ts` | thinking タグ分割 | 未実装（P2） |

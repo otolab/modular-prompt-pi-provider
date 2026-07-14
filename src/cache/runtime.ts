@@ -6,6 +6,7 @@ import {
   type CacheCleanResult,
   type CacheShowResult,
 } from "./cache-manager.js";
+import { logCacheEviction } from "../logging/runtime.js";
 import {
   DEFAULT_CACHE_POLICY,
   resolveCachePolicy,
@@ -45,10 +46,7 @@ export async function showAllCaches(): Promise<CacheShowResult[]> {
 }
 
 function logEviction(result: CacheCleanResult, trigger: string): void {
-  if (result.deleted.length === 0) return;
-  console.info(
-    `[cache:${trigger}] ${result.cacheDir}: deleted ${result.deleted.length}, kept ${result.kept}, freed ${result.freedMb} MB`,
-  );
+  void logCacheEviction(trigger, result);
 }
 
 export async function sweepAllCaches(options?: {

@@ -23,7 +23,8 @@
     "test": "vitest",
     "test:run": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "test:all": "npm run test:run && npm run test:integration"
+    "test:all": "npm run test:run && npm run test:integration",
+    "extract-log": "node --experimental-strip-types scripts/extract-log.ts"
   },
   "dependencies": {
     "@modular-prompt/driver": "0.14.0",

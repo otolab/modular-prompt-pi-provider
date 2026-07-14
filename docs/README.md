@@ -15,8 +15,9 @@
 | 7 | [streaming.md](./streaming.md) | 生ストリーム → Pi イベント（増分パーサ） |
 | 8 | [abort-spec.md](./abort-spec.md) | AbortSignal 要求仕様 |
 | 9 | [compaction.md](./compaction.md) | compact・overflow 回復 |
-| 10 | [implementation-plan.md](./implementation-plan.md) | ファイル構成・テスト |
-| 11 | [distribution.md](./distribution.md) | 配布・npm・インストール |
+| 10 | [logging.md](./logging.md) | JSONL デバッグログ・extract-log |
+| 11 | [implementation-plan.md](./implementation-plan.md) | ファイル構成・テスト |
+| 12 | [distribution.md](./distribution.md) | 配布・npm・インストール |
 
 ## 外部参照
 

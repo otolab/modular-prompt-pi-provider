@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parse as parseYaml } from "yaml";
+import { isDebugLoggingEnv } from "./logging/log-policy.js";
 
 /** Pi プラグインのディレクトリ名（プロバイダ ID と一致） */
 export const PLUGIN_DIR_NAME = "modular-prompt-provider";
@@ -201,6 +202,14 @@ export function resolveDefaultCacheDir(options: {
   return join(resolvePluginDataDir(options), "cache");
 }
 
+export function resolveDefaultLoggingDir(options: {
+  cwd: string;
+  isProjectTrusted: boolean;
+  usedProjectConfig: boolean;
+}): string {
+  return join(resolvePluginDataDir(options), "logs", "requests");
+}
+
 /**
  * グローバル YAML を読み、trust 済みならプロジェクト YAML を上書きマージする。
  * `~/.modular-prompt-pi/` や `services.yaml` は読まない。
@@ -232,13 +241,32 @@ export function loadPiProviderConfig(
     }
   }
 
-  const withDefaultCacheDirs = applyDefaultCacheDirs(merged, {
-    cwd,
-    isProjectTrusted,
-    usedProjectConfig,
-  });
+  const scope = { cwd, isProjectTrusted, usedProjectConfig };
+  const withDefaultCacheDirs = applyDefaultCacheDirs(merged, scope);
+  const withLogging = applyLoggingDefaults(withDefaultCacheDirs, scope);
 
-  return expandPathFields(withDefaultCacheDirs, homedir());
+  return expandPathFields(withLogging, homedir());
+}
+
+function applyLoggingDefaults(
+  config: PiProviderYamlConfig,
+  scope: { cwd: string; isProjectTrusted: boolean; usedProjectConfig: boolean },
+): PiProviderYamlConfig {
+  const debug = isDebugLoggingEnv();
+  if (!config.logging && !debug) {
+    return config;
+  }
+
+  const defaultDir = resolveDefaultLoggingDir(scope);
+  return {
+    ...config,
+    logging: {
+      level: config.logging?.level ?? "info",
+      requestResponseLevel:
+        config.logging?.requestResponseLevel ?? (debug ? "full" : "minimal"),
+      dir: config.logging?.dir ?? defaultDir,
+    },
+  };
 }
 
 function applyDefaultCacheDirs(
