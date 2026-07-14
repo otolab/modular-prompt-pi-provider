@@ -2,3 +2,4 @@ node_modules/
 .search-docs/
 .DS_Store
 *.log
+tests/integration/support/.mlx-probe-result.json

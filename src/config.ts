@@ -88,3 +88,8 @@ export function findModelSpec(
 ): ModelSpec | undefined {
   return config.models?.find((spec) => spec.model === modelId);
 }
+
+export function modelHasCacheDir(config: ApplicationConfig, modelId: string): boolean {
+  const cacheDir = findModelSpec(config, modelId)?.driverOptions?.cacheDir;
+  return typeof cacheDir === "string" && cacheDir.length > 0;
+}

@@ -1,13 +1,23 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Api, AssistantMessageEvent, Context, Model } from "@earendil-works/pi-ai";
+import type { QueryOptions } from "@modular-prompt/driver";
 import { TestDriver } from "@modular-prompt/driver";
 import { API_ID, PROVIDER_ID } from "../src/constants.js";
+import { getActiveStreamSessionId, resetActiveStreamSessionId } from "../src/cache/session-context.js";
 import { getDriverForModel } from "../src/driver/pool.js";
+import { getApplicationConfig } from "../src/driver/service.js";
 import { streamModularPromptMlx } from "../src/stream-simple.js";
 
 vi.mock("../src/driver/pool.js", () => ({
   getDriverForModel: vi.fn(),
   closeActiveDriver: vi.fn(),
+}));
+
+vi.mock("../src/driver/service.js", () => ({
+  getApplicationConfig: vi.fn(),
+  initApplicationConfig: vi.fn(),
+  getAIService: vi.fn(),
+  resetAIService: vi.fn(),
 }));
 
 const model = {
@@ -48,6 +58,10 @@ async function collectStream(stream: ReturnType<typeof streamModularPromptMlx>) 
 describe("streamModularPromptMlx (TestDriver)", () => {
   beforeEach(() => {
     vi.mocked(getDriverForModel).mockReset();
+    vi.mocked(getApplicationConfig).mockReturnValue({
+      models: [{ model: "test-model", provider: "mlx", capabilities: [] }],
+    });
+    resetActiveStreamSessionId();
   });
 
   it("emits start → text_* → done（Pi handleStreaming 相当）", async () => {
@@ -140,5 +154,70 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     }
     expect(message.stopReason).toBe("toolUse");
     expect(message.content.some((block) => block.type === "toolCall")).toBe(true);
+  });
+
+  it("streamQuery に cache オプションと sessionId を渡す", async () => {
+    vi.mocked(getApplicationConfig).mockReturnValue({
+      models: [
+        {
+          model: "test-model",
+          provider: "mlx",
+          capabilities: [],
+          driverOptions: { cacheDir: "/tmp/modular-prompt-cache" },
+        },
+      ],
+    });
+
+    let capturedOptions: QueryOptions | undefined;
+    vi.mocked(getDriverForModel).mockResolvedValue(
+      new TestDriver({
+        responses: (_prompt, options) => {
+          capturedOptions = options;
+          return "ok";
+        },
+      }),
+    );
+
+    const { message } = await collectStream(
+      streamModularPromptMlx(model, baseContext(), {
+        sessionId: "pi-session-1",
+        cacheRetention: "short",
+      }),
+    );
+
+    expect(capturedOptions?.cache).toBe(true);
+    expect(getActiveStreamSessionId()).toBe("pi-session-1");
+    expect(message.stopReason).toBe("stop");
+  });
+
+  it("cacheRetention none のとき streamQuery cache は false", async () => {
+    vi.mocked(getApplicationConfig).mockReturnValue({
+      models: [
+        {
+          model: "test-model",
+          provider: "mlx",
+          capabilities: [],
+          driverOptions: { cacheDir: "/tmp/modular-prompt-cache" },
+        },
+      ],
+    });
+
+    let capturedOptions: QueryOptions | undefined;
+    vi.mocked(getDriverForModel).mockResolvedValue(
+      new TestDriver({
+        responses: (_prompt, options) => {
+          capturedOptions = options;
+          return "ok";
+        },
+      }),
+    );
+
+    await collectStream(
+      streamModularPromptMlx(model, baseContext(), {
+        cacheRetention: "none",
+      }),
+    );
+
+    expect(capturedOptions?.cache).toBe(false);
   });
 });

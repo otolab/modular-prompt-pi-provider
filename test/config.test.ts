@@ -6,6 +6,7 @@ import {
   DEFAULT_MODEL_FALLBACK,
   createApplicationConfig,
   findModelSpec,
+  modelHasCacheDir,
 } from "../src/config.js";
 import { modelSpecToPiProviderModel } from "../src/driver/model-catalog.js";
 import { resetAIService } from "../src/driver/service.js";
@@ -88,6 +89,21 @@ drivers:
     const spec = findModelSpec(config, "mlx-community/yaml-model");
     expect(spec?.defaultOptions).toEqual({ maxTokens: 4096 });
     expect(config.drivers?.mlx?.pythonPath).toBe("/opt/python3");
+  });
+
+  it("modelHasCacheDir は driverOptions.cacheDir の有無を判定する", () => {
+    const withoutCache = createApplicationConfig();
+    expect(modelHasCacheDir(withoutCache, DEFAULT_MLX_MODEL)).toBe(false);
+
+    const withCache = createApplicationConfig({
+      models: [
+        {
+          model: "mlx-community/cached",
+          driverOptions: { cacheDir: "/tmp/cache" },
+        },
+      ],
+    });
+    expect(modelHasCacheDir(withCache, "mlx-community/cached")).toBe(true);
   });
 });
 

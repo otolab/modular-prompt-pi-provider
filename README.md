@@ -40,7 +40,16 @@ pi install -l git:github.com/otolab/modular-prompt-pi-provider@main
 ```bash
 npm install
 npm run typecheck
-npm run test:run   # ユニットテスト（MLX 非起動・逐次実行）
+npm run test:run          # ユニットテスト（MLX 非起動・逐次実行）
+npm run test:integration  # MLX 実機インテグレーション（未導入・非対応時は skip）
+npm run test:all          # 両方
+```
+
+インテグレーションのデフォルトモデルは [`prism-ml/Ternary-Bonsai-1.7B-mlx-2bit`](https://huggingface.co/prism-ml/Ternary-Bonsai-1.7B-mlx-2bit)（text LM・KV キャッシュ対応）。`INTEGRATION_MLX_MODEL` で上書き可能。詳細は [implementation-plan.md](./docs/implementation-plan.md#テスト)。
+
+```bash
+export INTEGRATION_MLX_MODEL=prism-ml/Ternary-Bonsai-1.7B-mlx-2bit
+npm run test:integration
 ```
 
 Pi は [jiti](https://github.com/unjs/jiti) で TypeScript を直接ロードするため、ビルドは必須ではない。
