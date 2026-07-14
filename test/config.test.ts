@@ -1,12 +1,29 @@
-import { describe, expect, it } from "vitest";
-import { DEFAULT_MLX_MODEL, createApplicationConfig, findModelSpec } from "../src/config.js";
+import { afterEach, describe, expect, it } from "vitest";
+import { join } from "node:path";
+import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
+import {
+  DEFAULT_MLX_MODEL,
+  DEFAULT_MODEL_FALLBACK,
+  createApplicationConfig,
+  findModelSpec,
+} from "../src/config.js";
 import { modelSpecToPiProviderModel } from "../src/driver/model-catalog.js";
+import { resetAIService } from "../src/driver/service.js";
+import {
+  CONFIG_FILENAME,
+  expandPath,
+  loadPiProviderConfig,
+  resolveDefaultCacheDir,
+} from "../src/pi-provider-config.js";
 
 describe("config", () => {
+  afterEach(() => {
+    delete process.env.MODULAR_PROMPT_PI_MODEL;
+    resetAIService();
+  });
+
   it("defaults to gemma heretic 4bit model", () => {
-    expect(DEFAULT_MLX_MODEL).toBe(
-      "mlx-community/gemma-4-26B-A4B-it-heretic-4bit",
-    );
+    expect(DEFAULT_MLX_MODEL).toBe(DEFAULT_MODEL_FALLBACK);
   });
 
   it("registers default model in ApplicationConfig", () => {
@@ -30,5 +47,137 @@ describe("config", () => {
     expect(piModel.id).toBe(DEFAULT_MLX_MODEL);
     expect(piModel.reasoning).toBe(true);
     expect(piModel.input).toEqual(["text"]);
+  });
+
+  it("MODULAR_PROMPT_PI_MODEL でデフォルトモデルを上書きする", () => {
+    process.env.MODULAR_PROMPT_PI_MODEL = "mlx-community/custom-model";
+    const config = createApplicationConfig();
+    expect(config.models?.[0]?.model).toBe("mlx-community/custom-model");
+  });
+
+  it("YAML models を ApplicationConfig に反映する", () => {
+    const globalPath = join(getAgentDir(), CONFIG_FILENAME);
+    const yaml = loadPiProviderConfig({
+      readFile: (path) => {
+        if (path === globalPath) {
+          return `
+models:
+  - model: mlx-community/yaml-model
+    defaultOptions:
+      maxTokens: 4096
+drivers:
+  mlx:
+    pythonPath: /opt/python3
+`;
+        }
+        throw new Error(`unexpected path: ${path}`);
+      },
+      fileExists: (path) => path === globalPath,
+    });
+
+    const config = createApplicationConfig(yaml);
+    const spec = findModelSpec(config, "mlx-community/yaml-model");
+    expect(spec?.defaultOptions).toEqual({ maxTokens: 4096 });
+    expect(config.drivers?.mlx?.pythonPath).toBe("/opt/python3");
+  });
+});
+
+describe("pi-provider-config", () => {
+  it("expandPath は ~/ を展開する", () => {
+    expect(expandPath("~/cache", "/home/test")).toBe("/home/test/cache");
+    expect(expandPath("~", "/home/test")).toBe("/home/test");
+    expect(expandPath("/absolute/path", "/home/test")).toBe("/absolute/path");
+  });
+
+  it("グローバル YAML を読み込む", () => {
+    const globalPath = join(getAgentDir(), CONFIG_FILENAME);
+    const files: Record<string, string> = {
+      [globalPath]: `
+models:
+  - model: global/model
+`,
+    };
+
+    const config = loadPiProviderConfig({
+      cwd: "/project",
+      isProjectTrusted: false,
+      fileExists: (path) => path in files,
+      readFile: (path) => files[path]!,
+    });
+
+    expect(config.models?.[0]?.model).toBe("global/model");
+  });
+
+  it("trust 前はプロジェクト YAML を読まない", () => {
+    const globalPath = join(getAgentDir(), CONFIG_FILENAME);
+    const projectPath = join("/project", CONFIG_DIR_NAME, CONFIG_FILENAME);
+    const files: Record<string, string> = {
+      [globalPath]: `
+models:
+  - model: global/model
+`,
+      [projectPath]: `
+models:
+  - model: project/model
+`,
+    };
+
+    const config = loadPiProviderConfig({
+      cwd: "/project",
+      isProjectTrusted: false,
+      fileExists: (path) => path in files,
+      readFile: (path) => files[path]!,
+    });
+
+    expect(config.models?.[0]?.model).toBe("global/model");
+  });
+
+  it("trust 後はプロジェクト YAML で上書きする", () => {
+    const globalPath = join(getAgentDir(), CONFIG_FILENAME);
+    const projectPath = join("/project", CONFIG_DIR_NAME, CONFIG_FILENAME);
+    const files: Record<string, string> = {
+      [globalPath]: `
+models:
+  - model: global/model
+    defaultOptions:
+      maxTokens: 1000
+drivers:
+  mlx:
+    pythonPath: /global/python
+`,
+      [projectPath]: `
+models:
+  - model: project/model
+    defaultOptions:
+      maxTokens: 2000
+drivers:
+  mlx:
+    pythonPath: ~/project/python
+`,
+    };
+
+    const config = loadPiProviderConfig({
+      cwd: "/project",
+      isProjectTrusted: true,
+      fileExists: (path) => path in files,
+      readFile: (path) => files[path]!,
+    });
+
+    expect(config.models?.[0]?.model).toBe("project/model");
+    expect(config.models?.[0]?.defaultOptions?.maxTokens).toBe(2000);
+    expect(config.drivers?.mlx?.pythonPath).toContain("project/python");
+    expect(config.models?.[0]?.driverOptions?.cacheDir).toBe(
+      join("/project", CONFIG_DIR_NAME, "modular-prompt-mlx", "cache"),
+    );
+  });
+
+  it("resolveDefaultCacheDir はスコープに応じたパスを返す", () => {
+    expect(
+      resolveDefaultCacheDir({
+        cwd: "/project",
+        isProjectTrusted: true,
+        usedProjectConfig: true,
+      }),
+    ).toBe(join("/project", CONFIG_DIR_NAME, "modular-prompt-mlx", "cache"));
   });
 });

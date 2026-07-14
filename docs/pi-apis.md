@@ -139,6 +139,23 @@ pi.on("session_before_compact", async (event, ctx) => {
 });
 ```
 
+## 設定（拡張独自）
+
+Pi に拡張専用の設定スキーマ API はない。本拡張は公式パターンに従い、次を使う。
+
+| 手段 | 用途 |
+|---|---|
+| `.pi/modular-prompt-mlx.yaml` | プロジェクト設定（trust 後） |
+| `~/.pi/agent/modular-prompt-mlx.yaml` | グローバル設定 |
+| `getAgentDir()` / `CONFIG_DIR_NAME` | パス解決（`@earendil-works/pi-coding-agent` から export） |
+| `~/.pi/agent/modular-prompt-mlx/{cache,logs}/` | データ（拡張名名前空間。Pi 公式の `agent/logs` はない） |
+| `models.json` `modelOverrides` | Pi UI 向けモデルメタの上書きのみ |
+| `settings.json` | デフォルトモデル等（Pi 管轄） |
+
+`~/.modular-prompt-pi/config.yaml` は採用しない。将来の `~/.modular-prompt/services.yaml` も現時点では未対応。
+
+詳細: [configuration.md](./configuration.md)
+
 ## その他 ExtensionAPI（本件では非中心）
 
 | API | 用途 |

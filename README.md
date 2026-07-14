@@ -43,13 +43,17 @@ npm run test:run   # ユニットテスト（MLX 非起動・逐次実行）
 
 Pi は [jiti](https://github.com/unjs/jiti) で TypeScript を直接ロードするため、ビルドは必須ではない。
 
-### モデル差し替え（開発時）
+### モデル・設定
+
+優先度: `.pi/modular-prompt-mlx.yaml`（trust 後）> `~/.pi/agent/modular-prompt-mlx.yaml` > `MODULAR_PROMPT_PI_MODEL` > コードデフォルト。
 
 ```bash
+cp modular-prompt-mlx.yaml.example ~/.pi/agent/modular-prompt-mlx.yaml
+# または
 export MODULAR_PROMPT_PI_MODEL=mlx-community/gemma-4-26B-A4B-it-heretic-4bit
 ```
 
-デフォルトは上記モデル。`src/config.ts` の `ApplicationConfig.models` で複数登録も可能。
+詳細: [docs/configuration.md](./docs/configuration.md)
 
 ## ドキュメント
 
