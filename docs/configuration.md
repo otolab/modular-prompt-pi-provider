@@ -123,6 +123,30 @@ logging:
 
 `~` はロード時に展開する。`cacheDir` / `logging.dir` 未指定時は上記デフォルトをプラグインデータ dir から組み立てる。
 
+## KV キャッシュ管理（#30 Phase 2）
+
+`cache` セクションは **pi-provider 側の `CacheManager`** が消費する。driver の `MlxCacheController` は retain/release ヒントのみで、TTL やディスク上限は持たない。
+
+### 削除優先順（eviction）
+
+1. `hint: release`（driver が不要とマークしたエントリ）
+2. `maxAgeDays` 超過（`cache-index.json` の `createdAt`）
+3. `maxSizeGb` 超過分を古い順に削除
+4. `minFreeDiskGb` 未満なら追加削除
+5. インデックス外の orphan `.safetensors`
+
+### 実行タイミング
+
+| タイミング | 設定 | 動作 |
+|---|---|---|
+| 設定ロード後（起動・`session_start`） | `sweepOnStartup` | 全 `cacheDir` を sweep |
+| 新規キャッシュ書き込み前 | `sweepBeforeWrite` | 当該 `cacheDir` を sweep |
+| Pi コマンド | — | `/cache show` / `/cache clean [--dry-run]` |
+
+eviction 結果は `console.info` に `[cache:startup]` 等のプレフィックスで出力する（[#42](https://github.com/otolab/modular-prompt-pi-provider/issues/42) で JSONL 化予定）。
+
+`cache-index.json` は `proper-lockfile` でロックし、driver と共存する。
+
 ## 意図的に対応しないもの（現時点）
 
 ### `~/.modular-prompt-pi/config.yaml`

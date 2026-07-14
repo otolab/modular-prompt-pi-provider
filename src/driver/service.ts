@@ -1,4 +1,5 @@
 import { AIService, type ApplicationConfig } from "@modular-prompt/driver";
+import { initCacheRuntime, resetCacheRuntime } from "../cache/runtime.js";
 import { createApplicationConfig } from "../config.js";
 import type { PiProviderYamlConfig } from "../pi-provider-config.js";
 
@@ -17,6 +18,7 @@ export function initApplicationConfig(
   overrides?: Partial<ApplicationConfig>,
 ): ApplicationConfig {
   config = createApplicationConfig(yamlConfig, overrides);
+  initCacheRuntime(yamlConfig, config);
   service = undefined;
   return config;
 }
@@ -38,4 +40,5 @@ export function getAIService(appConfig?: ApplicationConfig): AIService {
 export function resetAIService(): void {
   service = undefined;
   config = undefined;
+  resetCacheRuntime();
 }

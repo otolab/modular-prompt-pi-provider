@@ -33,7 +33,7 @@ export interface PiProviderYamlModelEntry {
   };
 }
 
-/** modular-prompt-provider/config.yaml の生データ（cache / logging は将来 Issue で消費） */
+/** modular-prompt-provider/config.yaml の生データ */
 export interface PiProviderYamlConfig {
   models?: PiProviderYamlModelEntry[];
   drivers?: {

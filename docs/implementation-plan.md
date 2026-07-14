@@ -23,9 +23,20 @@ modular-prompt-pi-provider/
       context-to-prompt.ts   ✅
       message-mapper.ts      ✅
       options.ts             ✅
+      cache-options.ts       ✅（#30 P1: QueryOptions.cache）
       usage.ts               ✅
       finish-reason.ts       ✅
-      stream-bridge.ts       ✅（M1: 生 text_delta。増分パーサなし）
+      stream-bridge.ts       ✅（M1: 生 text_delta。sweepBeforeWrite 配線 #30 P2）
+    cache/
+      cache-policy.ts        ✅（#30 P2: YAML cache セクション）
+      cache-dirs.ts          ✅
+      disk-usage.ts          ✅
+      cache-manager.ts       ✅（index ロック・eviction）
+      runtime.ts             ✅（startup / before-write sweep）
+      session-context.ts     ✅（#30 P1: sessionId 保持）
+    hooks/
+      session.ts             ✅（session_shutdown → close）
+      cache-commands.ts      ✅（/cache show | clean）
     driver/
       service.ts             # AIService シングルトン ✅
       pool.ts                # AIDriver 単一保持・切替 ✅
@@ -128,6 +139,9 @@ modular-prompt-pi-provider/
 | `test/message-mapper.test.ts` | Pi ↔ MessageElement | ✅ |
 | `test/config.test.ts` | モデル登録・デフォルト | ✅ |
 | `test/cache-options.test.ts` | `QueryOptions.cache` マッピング | ✅ |
+| `test/cache-policy.test.ts` | `resolveCachePolicy` | ✅ |
+| `test/cache-manager.test.ts` | eviction（release / age / size / orphan） | ✅ |
+| `test/cache-runtime.test.ts` | startup / before-write sweep 配線 | ✅ |
 | `test/stream-events.test.ts` | ストリーム契約（TestDriver） | ✅ |
 | `tests/integration/cache-hit.test.ts` | MLX KV キャッシュ（実機） | ✅ |
 | `incremental-parser.test.ts` | thinking タグ分割 | 未実装（P2） |
