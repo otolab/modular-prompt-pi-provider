@@ -17,8 +17,8 @@ describe("piMessageToElements", () => {
       piMessageToElements({
         role: "assistant",
         content: [{ type: "text", text: "hi" }],
-        api: "modular-prompt-mlx",
-        provider: "modular-prompt-mlx",
+        api: "modular-prompt-provider",
+        provider: "modular-prompt-provider",
         model: "m",
         usage: {
           input: 0,

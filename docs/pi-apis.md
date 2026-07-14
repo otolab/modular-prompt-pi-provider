@@ -29,11 +29,11 @@ export default async function (pi: ExtensionAPI): Promise<void> {
 ### 本拡張で使うフィールド
 
 ```typescript
-pi.registerProvider("modular-prompt-mlx", {
-  name: "Modular Prompt MLX",
-  baseUrl: "local://modular-prompt-mlx",  // Pi 必須。streamSimple では未使用
+pi.registerProvider("modular-prompt-provider", {
+  name: "Modular Prompt",
+  baseUrl: "local://modular-prompt-provider",  // Pi 必須。streamSimple では未使用
   apiKey: "local",                        // Pi 必須。streamSimple では未使用
-  api: "modular-prompt-mlx",
+  api: "modular-prompt-provider",
   streamSimple: streamModularPromptMlx,
   models: ProviderModelConfig[],
 });
@@ -58,7 +58,7 @@ pi.registerProvider("modular-prompt-mlx", {
 
 ```typescript
 function streamModularPromptMlx(
-  model: Model<"modular-prompt-mlx">,
+  model: Model<"modular-prompt-provider">,
   context: Context,
   options?: SimpleStreamOptions,
 ): AssistantMessageEventStream;
@@ -145,10 +145,10 @@ Pi に拡張専用の設定スキーマ API はない。本拡張は公式パタ
 
 | 手段 | 用途 |
 |---|---|
-| `.pi/modular-prompt-mlx.yaml` | プロジェクト設定（trust 後） |
-| `~/.pi/agent/modular-prompt-mlx.yaml` | グローバル設定 |
+| `.pi/modular-prompt-provider/config.yaml` | プロジェクト設定（trust 後） |
+| `~/.pi/agent/modular-prompt-provider/config.yaml` | グローバル設定 |
 | `getAgentDir()` / `CONFIG_DIR_NAME` | パス解決（`@earendil-works/pi-coding-agent` から export） |
-| `~/.pi/agent/modular-prompt-mlx/{cache,logs}/` | データ（拡張名名前空間。Pi 公式の `agent/logs` はない） |
+| `~/.pi/agent/modular-prompt-provider/{cache,logs}/` | プラグインデータ（Pi 公式の `agent/logs` はない） |
 | `models.json` `modelOverrides` | Pi UI 向けモデルメタの上書きのみ |
 | `settings.json` | デフォルトモデル等（Pi 管轄） |
 

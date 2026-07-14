@@ -4,8 +4,11 @@ import { join } from "node:path";
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parse as parseYaml } from "yaml";
 
-export const CONFIG_FILENAME = "modular-prompt-mlx.yaml";
-export const EXTENSION_DATA_DIR = "modular-prompt-mlx";
+/** Pi プラグインのディレクトリ名（プロバイダ ID と一致） */
+export const PLUGIN_DIR_NAME = "modular-prompt-provider";
+
+/** プラグイン設定ファイル名（`modular-prompt-provider/config.yaml`） */
+export const CONFIG_FILENAME = "config.yaml";
 
 /** YAML `models[]` の 1 エントリ */
 export interface PiProviderYamlModelEntry {
@@ -30,7 +33,7 @@ export interface PiProviderYamlModelEntry {
   };
 }
 
-/** modular-prompt-mlx.yaml の生データ（cache / logging は将来 Issue で消費） */
+/** modular-prompt-provider/config.yaml の生データ（cache / logging は将来 Issue で消費） */
 export interface PiProviderYamlConfig {
   models?: PiProviderYamlModelEntry[];
   drivers?: {
@@ -175,9 +178,19 @@ export function resolvePiProviderConfigPaths(
   cwd: string = process.cwd(),
 ): PiProviderConfigPaths {
   return {
-    global: join(getAgentDir(), CONFIG_FILENAME),
-    project: join(cwd, CONFIG_DIR_NAME, CONFIG_FILENAME),
+    global: join(getAgentDir(), PLUGIN_DIR_NAME, CONFIG_FILENAME),
+    project: join(cwd, CONFIG_DIR_NAME, PLUGIN_DIR_NAME, CONFIG_FILENAME),
   };
+}
+
+export function resolvePluginDataDir(options: {
+  cwd: string;
+  isProjectTrusted: boolean;
+  usedProjectConfig: boolean;
+}): string {
+  return options.usedProjectConfig && options.isProjectTrusted
+    ? join(options.cwd, CONFIG_DIR_NAME, PLUGIN_DIR_NAME)
+    : join(getAgentDir(), PLUGIN_DIR_NAME);
 }
 
 export function resolveDefaultCacheDir(options: {
@@ -185,10 +198,7 @@ export function resolveDefaultCacheDir(options: {
   isProjectTrusted: boolean;
   usedProjectConfig: boolean;
 }): string {
-  const dataRoot = options.usedProjectConfig && options.isProjectTrusted
-    ? join(options.cwd, CONFIG_DIR_NAME, EXTENSION_DATA_DIR)
-    : join(getAgentDir(), EXTENSION_DATA_DIR);
-  return join(dataRoot, "cache");
+  return join(resolvePluginDataDir(options), "cache");
 }
 
 /**

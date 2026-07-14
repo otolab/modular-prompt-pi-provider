@@ -11,10 +11,19 @@ import { modelSpecToPiProviderModel } from "../src/driver/model-catalog.js";
 import { resetAIService } from "../src/driver/service.js";
 import {
   CONFIG_FILENAME,
+  PLUGIN_DIR_NAME,
   expandPath,
   loadPiProviderConfig,
   resolveDefaultCacheDir,
 } from "../src/pi-provider-config.js";
+
+function globalConfigPath(): string {
+  return join(getAgentDir(), PLUGIN_DIR_NAME, CONFIG_FILENAME);
+}
+
+function projectConfigPath(cwd: string): string {
+  return join(cwd, CONFIG_DIR_NAME, PLUGIN_DIR_NAME, CONFIG_FILENAME);
+}
 
 describe("config", () => {
   afterEach(() => {
@@ -56,7 +65,7 @@ describe("config", () => {
   });
 
   it("YAML models を ApplicationConfig に反映する", () => {
-    const globalPath = join(getAgentDir(), CONFIG_FILENAME);
+    const globalPath = globalConfigPath();
     const yaml = loadPiProviderConfig({
       readFile: (path) => {
         if (path === globalPath) {
@@ -89,8 +98,8 @@ describe("pi-provider-config", () => {
     expect(expandPath("/absolute/path", "/home/test")).toBe("/absolute/path");
   });
 
-  it("グローバル YAML を読み込む", () => {
-    const globalPath = join(getAgentDir(), CONFIG_FILENAME);
+  it("グローバル config.yaml を読み込む", () => {
+    const globalPath = globalConfigPath();
     const files: Record<string, string> = {
       [globalPath]: `
 models:
@@ -108,9 +117,9 @@ models:
     expect(config.models?.[0]?.model).toBe("global/model");
   });
 
-  it("trust 前はプロジェクト YAML を読まない", () => {
-    const globalPath = join(getAgentDir(), CONFIG_FILENAME);
-    const projectPath = join("/project", CONFIG_DIR_NAME, CONFIG_FILENAME);
+  it("trust 前はプロジェクト config.yaml を読まない", () => {
+    const globalPath = globalConfigPath();
+    const projectPath = projectConfigPath("/project");
     const files: Record<string, string> = {
       [globalPath]: `
 models:
@@ -132,9 +141,9 @@ models:
     expect(config.models?.[0]?.model).toBe("global/model");
   });
 
-  it("trust 後はプロジェクト YAML で上書きする", () => {
-    const globalPath = join(getAgentDir(), CONFIG_FILENAME);
-    const projectPath = join("/project", CONFIG_DIR_NAME, CONFIG_FILENAME);
+  it("trust 後はプロジェクト config.yaml で上書きする", () => {
+    const globalPath = globalConfigPath();
+    const projectPath = projectConfigPath("/project");
     const files: Record<string, string> = {
       [globalPath]: `
 models:
@@ -167,7 +176,7 @@ drivers:
     expect(config.models?.[0]?.defaultOptions?.maxTokens).toBe(2000);
     expect(config.drivers?.mlx?.pythonPath).toContain("project/python");
     expect(config.models?.[0]?.driverOptions?.cacheDir).toBe(
-      join("/project", CONFIG_DIR_NAME, "modular-prompt-mlx", "cache"),
+      join("/project", CONFIG_DIR_NAME, PLUGIN_DIR_NAME, "cache"),
     );
   });
 
@@ -178,6 +187,6 @@ drivers:
         isProjectTrusted: true,
         usedProjectConfig: true,
       }),
-    ).toBe(join("/project", CONFIG_DIR_NAME, "modular-prompt-mlx", "cache"));
+    ).toBe(join("/project", CONFIG_DIR_NAME, PLUGIN_DIR_NAME, "cache"));
   });
 });

@@ -10,17 +10,28 @@ OpenAI 互換ラッパー（Ollama / Rapid-MLX 等）では活かしきれない
 - モデル固有 tool call パーサー
 - VLM / completion API の自動切り替え
 
+## 三者の関係
+
+| 名前 | 役割 |
+|---|---|
+| **modular-prompt** | プロンプトモジュール・`AIService` / `AIDriver` を持つフレームワーク（Pi 非依存） |
+| **Pi** | エージェント本体。プラグインを読み込み LLM プロバイダを選択する |
+| **modular-prompt-provider** | 本リポジトリのプラグイン ID。driver を Pi の `registerProvider` に接続する |
+
+npm パッケージ名 `@modular-prompt/pi-provider-ext` は配布名。ランタイム上のプロバイダ ID・設定ディレクトリは [configuration.md](./configuration.md) のとおり **`modular-prompt-provider`**。
+
 ## レイヤ構成
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Pi Agent Loop                                                │
 │   tools: read / write / edit / bash …                        │
+│   プロバイダ: modular-prompt-provider                        │
 └───────────────────────────┬─────────────────────────────────┘
                             │ Context, SimpleStreamOptions
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ @modular-prompt/pi-provider-ext（本リポジトリ）                 │
+│ @modular-prompt/pi-provider-ext（本リポジトリ / Pi プラグイン）  │
 │                                                              │
 │  index.ts              ExtensionAPI エントリ                  │
 │  config.ts             ApplicationConfig / モデル登録         │
@@ -52,23 +63,24 @@ OpenAI 互換ラッパー（Ollama / Rapid-MLX 等）では活かしきれない
 | 層 | 責務 | 実装場所 |
 |---|---|---|
 | Pi コア | エージェントループ、ツール実行、デフォルト compact | Pi 本体 |
-| **本拡張** | プロバイダ登録、`streamSimple`、型変換、増分パーサ、`result` → Pi `Usage`、モデル登録、compact Prompt、overflow リライト | 本リポジトリ |
+| **本プラグイン** | プロバイダ登録、`streamSimple`、型変換、増分パーサ、`result` → Pi `Usage`、モデル登録、compact Prompt、overflow リライト | 本リポジトリ |
 | modular-prompt | `AIDriver` 実装、推論、`result.usage`、`QueryOptions.signal`（driver 0.14.0+） | driver パッケージ |
 
 ## 設計原則
 
-1. **`Context` → `CompiledPrompt` の変換は本拡張の責務** — driver に `streamFromMessages` は追加しない（[modular-prompt#291 コメント](https://github.com/otolab/modular-prompt/issues/291#issuecomment-4933094279)）
-2. **独自 `api` ID** — `api: "modular-prompt-mlx"`。`openai-completions` 流用は内蔵プロバイダと競合（[pi#2696](https://github.com/earendil-works/pi/issues/2696)）
-3. **`MlxDriver` を直接 new しない** — `AIService` + `ApplicationConfig.models` で登録し、`AIDriver` として利用。将来プロバイダ追加に備える
+1. **`Context` → `CompiledPrompt` の変換は本プラグインの責務** — driver に `streamFromMessages` は追加しない（[modular-prompt#291 コメント](https://github.com/otolab/modular-prompt/issues/291#issuecomment-4933094279)）
+2. **独自 `api` ID** — `api: "modular-prompt-provider"`。`openai-completions` 流用は内蔵プロバイダと競合（[pi#2696](https://github.com/earendil-works/pi/issues/2696)）
+3. **`MlxDriver` を直接 new しない** — `AIService` + `ApplicationConfig.models` で登録し、`AIDriver` として利用。将来ドライバ追加に備える
 4. **MLX は同時 1 ドライバ** — メモリ制約のため `driver/pool.ts` は単一インスタンス。切替時 `close()`
 5. **ファクトリ内で MLX プロセスを起動しない** — 初回 `streamSimple` で遅延初期化（`pool` 経由）
 6. **エラーは throw しない** — `streamSimple` は `error` イベントで返す（Pi 契約）
+7. **プラグイン名だけを名前空間に使う** — 設定・データは `modular-prompt-provider/` の下のみ（[configuration.md](./configuration.md)）
 
 ## モデル設定（M1）
 
 | 項目 | 値 |
 |---|---|
-| 登録 | `src/config.ts` の `ApplicationConfig.models` |
+| 登録 | `modular-prompt-provider/config.yaml` → `ApplicationConfig.models` |
 | デフォルト | `mlx-community/gemma-4-26B-A4B-it-heretic-4bit` |
 | 上書き | 環境変数 `MODULAR_PROMPT_PI_MODEL` |
 | Pi 表示 | `model-catalog.ts` が `ModelSpec` → `registerProvider` の `models` に変換 |
@@ -77,7 +89,7 @@ OpenAI 互換ラッパー（Ollama / Rapid-MLX 等）では活かしきれない
 
 | 定数 | 値 |
 |---|---|
-| `PROVIDER_ID` | `modular-prompt-mlx` |
-| `API_ID` | `modular-prompt-mlx` |
+| `PROVIDER_ID` | `modular-prompt-provider` |
+| `API_ID` | `modular-prompt-provider` |
 
 `registerProvider` の第1引数と `Model.api` / `streamSimple` 登録で一貫させる。

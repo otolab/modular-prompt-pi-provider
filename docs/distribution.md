@@ -70,7 +70,7 @@ publish 時は `package.json` の `"private": true` を外す。
 | **`@modular-prompt/pi-provider-ext`**（現行） | driver 系列と一貫、`provider` + `ext` が明確 | やや長い |
 | `@modular-prompt/pi-mlx-provider` | MLX 専用と明示 | 将来 HTTP 橋を足すと名前が狭い |
 | `@modular-prompt/pi-driver` | 短い | `@modular-prompt/driver` と紛らわしい |
-| `pi-modular-prompt-mlx`（無スコープ） | ギャラリー検索向き | org 系列から外れる |
+| `pi-modular-prompt`（無スコープ） | ギャラリー検索向き | org 系列から外れる |
 
 コミュニティで多いのは **`pi-<機能>`**（無スコープ）と **`@org/pi-<機能>`**。`@modular-prompt` スコープを維持するなら現行名で問題ない。
 

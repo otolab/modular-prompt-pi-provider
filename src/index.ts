@@ -10,7 +10,7 @@ function registerMlxProvider(pi: ExtensionAPI, appConfig: ApplicationConfig): vo
   const models = (appConfig.models ?? []).map(modelSpecToPiProviderModel);
 
   pi.registerProvider(PROVIDER_ID, {
-    name: "Modular Prompt MLX",
+    name: "Modular Prompt",
     baseUrl: PROVIDER_BASE_URL,
     apiKey: PROVIDER_API_KEY,
     api: API_ID,
