@@ -3,6 +3,7 @@ import { initCacheRuntime, resetCacheRuntime } from "../cache/runtime.js";
 import { initLoggingRuntime, resetLoggingRuntime } from "../logging/runtime.js";
 import { createApplicationConfig } from "../config.js";
 import type { PiProviderYamlConfig } from "../pi-provider-config.js";
+import { resolveConfiguredRequestLogDir } from "../pi-provider-config.js";
 
 let service: AIService | undefined;
 let config: ApplicationConfig | undefined;
@@ -22,7 +23,7 @@ export function initApplicationConfig(
   initCacheRuntime(yamlConfig, config);
   initLoggingRuntime(
     yamlConfig,
-    yamlConfig?.logging?.dir ?? "",
+    yamlConfig?.logging?.dir || resolveConfiguredRequestLogDir(),
   );
   service = undefined;
   return config;

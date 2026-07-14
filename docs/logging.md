@@ -57,9 +57,9 @@ interface LogEntry {
 | `driver_info` | provider、capabilities、cacheDir |
 | `prompt` | `formatCompletionPrompt` 結果 |
 | `llm_response` | content / usage / finishReason |
-| `cache_stats` | `cacheReadTokens` / `cacheWriteTokens` |
+| `cache_stats` | `MlxCacheController.getStats()` 相当（`totalQueries` / `incremental` / `fresh` / `prefillReusedTokens` / `cacheGrowthTokens` 等） |
 | `error` | 例外・abort |
-| `eviction` | CacheManager sweep（サーバーログ） |
+| `eviction` | CacheManager sweep（サーバーログ）。`dryRun: true` 時も記録 |
 
 ## extract-log（調査 CLI）
 

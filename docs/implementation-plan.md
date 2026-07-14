@@ -150,6 +150,7 @@ modular-prompt-pi-provider/
 | `test/cache-runtime.test.ts` | startup / before-write sweep 配線 | ✅ |
 | `test/log-policy.test.ts` | `resolveLoggingPolicy` | ✅ |
 | `test/request-logger.test.ts` | JSONL 記録 | ✅ |
+| `test/cache-stats.test.ts` | `getCacheStats` | ✅ |
 | `test/stream-events.test.ts` | ストリーム契約（TestDriver） | ✅ |
 | `tests/integration/cache-hit.test.ts` | MLX KV キャッシュ（実機） | ✅ |
 | `incremental-parser.test.ts` | thinking タグ分割 | 未実装（P2） |

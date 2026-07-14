@@ -9,6 +9,7 @@ import { isAborted, formatCompletionPrompt } from "@modular-prompt/driver";
 import { sweepCacheDirBeforeWrite } from "../cache/runtime.js";
 import { findModelSpec, modelHasCacheDir } from "../config.js";
 import { getDriverForModel } from "../driver/pool.js";
+import { getCacheStats } from "../driver/cache-stats.js";
 import { getApplicationConfig } from "../driver/service.js";
 import { setActiveStreamSessionId } from "../cache/session-context.js";
 import { beginRequestLog } from "../logging/runtime.js";
@@ -118,13 +119,9 @@ export async function bridgeDriverStreamToPi(
         usage: final.usage,
         toolCalls: final.toolCalls,
       });
-      if (final.usage?.cacheReadTokens || final.usage?.cacheWriteTokens) {
-        await requestLog.logCacheStats(workPhase, {
-          cacheReadTokens: final.usage.cacheReadTokens ?? 0,
-          cacheWriteTokens: final.usage.cacheWriteTokens ?? 0,
-          promptTokens: final.usage.promptTokens,
-          completionTokens: final.usage.completionTokens,
-        });
+      const cacheStats = getCacheStats(driver);
+      if (cacheStats) {
+        await requestLog.logCacheStats(workPhase, cacheStats);
       }
     }
 

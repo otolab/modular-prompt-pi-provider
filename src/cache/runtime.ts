@@ -58,9 +58,7 @@ export async function sweepAllCaches(options?: {
   for (const dir of cacheDirs) {
     const result = await managerFor(dir).clean({ dryRun: options?.dryRun });
     results.push(result);
-    if (!options?.dryRun) {
-      logEviction(result, trigger);
-    }
+    logEviction(result, trigger);
   }
   return results;
 }
