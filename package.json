@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@modular-prompt/driver": "0.14.0",
+    "proper-lockfile": "^4.1.2",
     "yaml": "^2.9.0"
   },
   "peerDependencies": {
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@earendil-works/pi-ai": "0.80.6",
     "@earendil-works/pi-coding-agent": "0.80.6",
+    "@types/proper-lockfile": "^4.1.4",
     "typescript": "5.9.3",
     "vitest": "3.2.4"
   },

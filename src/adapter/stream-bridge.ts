@@ -6,7 +6,8 @@ import type {
   SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
 import { isAborted } from "@modular-prompt/driver";
-import { modelHasCacheDir } from "../config.js";
+import { sweepCacheDirBeforeWrite } from "../cache/runtime.js";
+import { findModelSpec, modelHasCacheDir } from "../config.js";
 import { getDriverForModel } from "../driver/pool.js";
 import { getApplicationConfig } from "../driver/service.js";
 import { setActiveStreamSessionId } from "../cache/session-context.js";
@@ -39,9 +40,8 @@ export async function bridgeDriverStreamToPi(
       return;
     }
 
-    const driver = await getDriverForModel(model.id);
-    const prompt = piContextToCompiledPrompt(context);
-    const hasCacheDir = modelHasCacheDir(getApplicationConfig(), model.id);
+    const appConfig = getApplicationConfig();
+    const hasCacheDir = modelHasCacheDir(appConfig, model.id);
     setActiveStreamSessionId(options?.sessionId);
     const queryOpts = {
       ...piOptionsToQueryOptions(options, model, hasCacheDir),
@@ -52,6 +52,16 @@ export async function bridgeDriverStreamToPi(
           }
         : {}),
     };
+
+    if (hasCacheDir && queryOpts.cache === true) {
+      const cacheDir = findModelSpec(appConfig, model.id)?.driverOptions?.cacheDir;
+      if (cacheDir) {
+        await sweepCacheDirBeforeWrite(cacheDir);
+      }
+    }
+
+    const driver = await getDriverForModel(model.id);
+    const prompt = piContextToCompiledPrompt(context);
 
     const { stream, result } = await driver.streamQuery(prompt, queryOpts);
 
