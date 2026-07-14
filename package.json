@@ -21,7 +21,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run --config vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:all": "npm run test:run && npm run test:integration"
   },
   "dependencies": {
     "@modular-prompt/driver": "0.14.0",

@@ -9,7 +9,10 @@
 ```
 modular-prompt-pi-provider/
   package.json
-  vitest.config.ts
+  vitest.config.ts              # ユニットテスト
+  vitest.integration.config.ts  # MLX 実機インテグレーション
+  test/                         # ユニットテスト ✅
+  tests/integration/            # MLX 実機インテグレーション ✅
   .search-docs.json
   src/
     index.ts                 # ExtensionAPI エントリ ✅
@@ -27,13 +30,13 @@ modular-prompt-pi-provider/
       service.ts             # AIService シングルトン ✅
       pool.ts                # AIDriver 単一保持・切替 ✅
       model-catalog.ts       # ModelSpec → Pi models ✅
-  test/                      # vitest ユニットテスト ✅
   docs/
 ```
 
 ### 未実装（予定）
 
 ```
+  src/
     adapter/
       tools.ts               # P1
       incremental-parser.ts  # P2
@@ -84,7 +87,26 @@ modular-prompt-pi-provider/
 
 ## テスト
 
-`npm test`（watch）/ `npm run test:run`（1 回）。**MLX モデルを載せるテストは逐次実行のみ**（`vitest.config.ts` で `fileParallelism: false`）。
+| 種別 | 場所 | コマンド |
+|---|---|---|
+| ユニット | `test/**/*.test.ts` | `npm run test:run` |
+| インテグレーション | `tests/integration/**/*.test.ts` | `npm run test:integration` |
+
+`npm test`（watch）はユニットのみ。両方: `npm run test:all`。
+
+**MLX モデルを載せるテストは逐次実行のみ**（`fileParallelism: false` / `maxWorkers: 1`）。
+
+### インテグレーション（MLX 実機）
+
+| 項目 | 内容 |
+|---|---|
+| デフォルトモデル | [`prism-ml/Ternary-Bonsai-1.7B-mlx-2bit`](https://huggingface.co/prism-ml/Ternary-Bonsai-1.7B-mlx-2bit) |
+| 選定理由 | text-only LM（KV キャッシュ対応）。1.7B 2bit でインテグレーションのサイズ・速度に最適 |
+| 上書き | `INTEGRATION_MLX_MODEL` 環境変数 |
+| スキップ | `SKIP_INTEGRATION=1`、または MLX 未導入・VLM 等でプローブ失敗時 |
+| 主なテスト | `tests/integration/cache-hit.test.ts`（KV キャッシュ hit / `cacheRetention: none` / read-only） |
+
+アプリのコードデフォルト（Gemma 4 VLM）は KV キャッシュ非対応のため、インテグレーションでは **`MODULAR_PROMPT_PI_MODEL` にフォールバックしない**。
 
 ### Pi 公式（`@earendil-works/pi-ai`）
 
@@ -105,9 +127,12 @@ modular-prompt-pi-provider/
 | `test/options.test.ts` | `signal` / reasoning マッピング | ✅ |
 | `test/message-mapper.test.ts` | Pi ↔ MessageElement | ✅ |
 | `test/config.test.ts` | モデル登録・デフォルト | ✅ |
+| `test/cache-options.test.ts` | `QueryOptions.cache` マッピング | ✅ |
+| `test/stream-events.test.ts` | ストリーム契約（TestDriver） | ✅ |
+| `tests/integration/cache-hit.test.ts` | MLX KV キャッシュ（実機） | ✅ |
 | `incremental-parser.test.ts` | thinking タグ分割 | 未実装（P2） |
 
-ユニットテストは vitest。devDependency に `@modular-prompt/experiment`（性能試験フレームワーク・将来の統合テスト参照用）。MLX 統合は手動 + Pi セッション。
+ユニットテストは vitest。MLX 実機は `tests/integration/`（`vitest.integration.config.ts`）。Pi 公式テスト（stream / tokens / abort）は別途。
 
 ## ステータス
 
