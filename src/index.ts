@@ -3,6 +3,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { API_ID, PROVIDER_API_KEY, PROVIDER_BASE_URL, PROVIDER_ID } from "./constants.js";
 import { modelSpecToPiProviderModel } from "./driver/model-catalog.js";
 import { initApplicationConfig } from "./driver/service.js";
+import { registerSessionHooks } from "./hooks/session.js";
 import { loadPiProviderConfig } from "./pi-provider-config.js";
 import { streamModularPromptMlx } from "./stream-simple.js";
 
@@ -20,6 +21,8 @@ function registerMlxProvider(pi: ExtensionAPI, appConfig: ApplicationConfig): vo
 }
 
 export default async function (pi: ExtensionAPI): Promise<void> {
+  registerSessionHooks(pi);
+
   const loadAndRegister = (cwd: string, isProjectTrusted: boolean): ApplicationConfig => {
     const yamlConfig = loadPiProviderConfig({ cwd, isProjectTrusted });
     const appConfig = initApplicationConfig(yamlConfig);
