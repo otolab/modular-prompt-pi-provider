@@ -4,10 +4,7 @@
  *
  * sprite-claude packages/anthropic-server/src/analysis から移植（--dir 追加）。
  */
-import path from "node:path";
-import { homedir } from "node:os";
-import { Command } from "commander";
-import { PHASES, PHASE_DESCRIPTIONS, type Phase } from "./types.js";
+import { resolveConfiguredRequestLogDir } from "../pi-provider-config.js";
 import {
   findSessionFiles,
   parseLogFile,
@@ -33,19 +30,23 @@ import {
   displayTaskOverviews,
   displayTaskDetail,
 } from "./task-detail.js";
+import { Command } from "commander";
+import { PHASES, PHASE_DESCRIPTIONS, type Phase } from "./types.js";
 
-const DEFAULT_DIR = path.join(
-  homedir(),
-  ".pi/agent/modular-prompt-provider/logs/requests",
-);
+function argvValue(argv: string[], flag: string): string | undefined {
+  const idx = argv.indexOf(flag);
+  return idx >= 0 ? argv[idx + 1] : undefined;
+}
 
 function applyDirFromArgv(argv: string[]): void {
-  const idx = argv.indexOf("--dir");
-  if (idx >= 0 && argv[idx + 1]) {
-    setLogsDir(argv[idx + 1]!);
-  } else {
-    setLogsDir(DEFAULT_DIR);
+  const explicitDir = argvValue(argv, "--dir");
+  if (explicitDir) {
+    setLogsDir(explicitDir);
+    return;
   }
+
+  const cwd = argvValue(argv, "--cwd") ?? process.cwd();
+  setLogsDir(resolveConfiguredRequestLogDir({ cwd }));
 }
 
 applyDirFromArgv(process.argv);
@@ -56,20 +57,25 @@ program
   .name("extract-log")
   .description(`Navigate modular-prompt-provider request logs (sprite-claude extract-log 移植).
 
-Request logs are JSONL files under logging.dir (default: ~/.pi/agent/modular-prompt-provider/logs/requests/).
-Use --dir to override.
+Request logs: modular-prompt-provider/config.yaml の logging.dir（未指定時はプラグインデータ dir 配下）。
+--dir で上書き可能。--cwd で設定探索の作業ディレクトリを指定（デフォルト: カレント）。
 
 Drill-down:
   summary                         List all requests in a session (file-level map)
   show --seq <id>                 Show entries in a request (entry-level map)
   show --seq <id> --messages      Show message structure (message-level map)
   show --seq <id> --raw <path>    Extract raw value by path`)
-  .option("--dir <path>", "Request logs directory", DEFAULT_DIR)
+  .option(
+    "--dir <path>",
+    "Request logs directory（省略時は config.yaml の logging.dir）",
+  )
+  .option("--cwd <path>", "config.yaml 探索の cwd（デフォルト: process.cwd()）")
   .version("3.0.0")
   .addHelpText('after', `
 Examples:
   # 1. Session overview (which files to look at)
-  extract-log summary --dir ~/.pi/agent/modular-prompt-provider/logs/requests
+  extract-log summary
+  extract-log summary --cwd /path/to/project
 
   # 2. Request structure (which entries/lines to look at)
   extract-log show --seq 0014

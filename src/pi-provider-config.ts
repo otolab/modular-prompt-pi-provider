@@ -247,6 +247,37 @@ export function loadPiProviderConfig(
   return expandPathFields(withLogging, homedir());
 }
 
+/**
+ * リクエストログ dir を config.yaml から解決する（extract-log CLI 等）。
+ * 優先: マージ済み `logging.dir` > グローバルデフォルト。
+ * プロジェクト `config.yaml` はファイルが存在すれば trust 済みとしてマージする。
+ */
+export function resolveConfiguredRequestLogDir(
+  options: LoadPiProviderConfigOptions = {},
+): string {
+  const cwd = options.cwd ?? process.cwd();
+  const fileExists = options.fileExists ?? existsSync;
+  const paths = resolvePiProviderConfigPaths(cwd);
+  const projectConfigExists = fileExists(paths.project);
+  const isProjectTrusted = options.isProjectTrusted ?? projectConfigExists;
+
+  const config = loadPiProviderConfig({
+    ...options,
+    cwd,
+    isProjectTrusted,
+  });
+
+  if (config.logging?.dir) {
+    return config.logging.dir;
+  }
+
+  return resolveDefaultLoggingDir({
+    cwd,
+    isProjectTrusted: false,
+    usedProjectConfig: false,
+  });
+}
+
 function applyLoggingDefaults(
   config: PiProviderYamlConfig,
   scope: { cwd: string; isProjectTrusted: boolean; usedProjectConfig: boolean },

@@ -68,10 +68,11 @@ interface LogEntry {
 ```bash
 npm run extract-log -- summary
 npm run extract-log -- show --seq 0001
-npm run extract-log -- --dir ~/.pi/agent/modular-prompt-provider/logs/requests summary
+npm run extract-log -- --dir /custom/logs/requests summary
+npm run extract-log -- --cwd /path/to/project summary
 ```
 
-デフォルト dir: `~/.pi/agent/modular-prompt-provider/logs/requests`（`logging.dir` と同じ）。
+デフォルト dir: `config.yaml` の `logging.dir`（`loadPiProviderConfig` と同じ解決）。`--dir` で上書き、`--cwd` で探索 cwd を指定。
 
 sprite-claude と同様に `summary` / `show`（`--messages` / `--raw` / `--phase`）/ `tasks` / `phases` / `server` が使える。pi-provider のログは HTTP API 形式ではないため `--messages` の一部は空になる。
 
