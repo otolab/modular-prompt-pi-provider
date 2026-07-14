@@ -33,7 +33,7 @@ driver は `QueryOptions.signal`、`result.usage`（`cacheReadTokens` / `cacheWr
 | **P0** | Pi `Usage` マッピング | `result.usage` → `output.usage`（[adapter.md](./adapter.md)） | ✅ コード + ユニット |
 | **P0** | `signal` 伝播と abort 変換 | `QueryOptions.signal` に渡し、`finishReason: 'error'` + `signal.aborted` → `"aborted"`（[abort-spec.md](./abort-spec.md)） | ✅ コード + ユニット |
 | **P1** | `toolcall_*` | `result` 後の一括発行でツールループが回る | — |
-| **P1** | モデル discovery | `pi --list-models` に表示（`getCapabilities` 連携） | 固定 1 モデルのみ登録 |
+| **P1** | モデル discovery | `pi --list-models` に表示（`getCapabilities` 連携） | ✅ コード（実機未検証） |
 | **P1** | `session_shutdown` → `close()` | プロセスリークなし | — |
 | **P1** | `session_before_compact` + Prompt | 手動 `/compact` | — |
 | **P2** | 増分パーサ | `thinking_*` リアルタイム。タグが UI に漏れない | — |

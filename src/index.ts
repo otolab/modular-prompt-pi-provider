@@ -2,7 +2,9 @@ import type { ApplicationConfig } from "@modular-prompt/driver";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { API_ID, PROVIDER_API_KEY, PROVIDER_BASE_URL, PROVIDER_ID } from "./constants.js";
 import { modelSpecToPiProviderModel } from "./driver/model-catalog.js";
+import { discoverApplicationConfig } from "./driver/discovery.js";
 import { initApplicationConfig } from "./driver/service.js";
+import { createApplicationConfig } from "./config.js";
 import { runCacheSweepOnStartup } from "./cache/runtime.js";
 import { registerCacheCommands } from "./hooks/cache-commands.js";
 import { registerSessionHooks } from "./hooks/session.js";
@@ -31,7 +33,11 @@ export default async function (pi: ExtensionAPI): Promise<void> {
     isProjectTrusted: boolean,
   ): Promise<ApplicationConfig> => {
     const yamlConfig = loadPiProviderConfig({ cwd, isProjectTrusted });
-    const appConfig = initApplicationConfig(yamlConfig);
+    const baseConfig = createApplicationConfig(yamlConfig);
+    const discoveredConfig = await discoverApplicationConfig(baseConfig);
+    const appConfig = initApplicationConfig(yamlConfig, {
+      models: discoveredConfig.models,
+    });
     registerMlxProvider(pi, appConfig);
     await runCacheSweepOnStartup();
     return appConfig;
