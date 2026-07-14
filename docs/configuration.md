@@ -144,7 +144,7 @@ logging:
 | `session_shutdown` / モデル切替（`pool.close`） | — | driver `close()` が `hint: release` にしたエントリを次回 sweep で削除（sessionId スコープの `release()` は [#30](https://github.com/otolab/modular-prompt-pi-provider/issues/30) Phase 3 予定） |
 | Pi コマンド | — | `/cache show` / `/cache clean [--dry-run]` |
 
-eviction 結果は `console.info` に `[cache:startup]` 等のプレフィックスで出力する（[#42](https://github.com/otolab/modular-prompt-pi-provider/issues/42) で JSONL 化予定）。
+eviction 結果は `console.info` と JSONL（`server-{pid}.jsonl` の `eviction`）に記録する。詳細は [logging.md](./logging.md)。
 
 `cache-index.json` は `proper-lockfile` でロックし、driver と共存する。
 

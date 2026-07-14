@@ -201,6 +201,14 @@ export function resolveDefaultCacheDir(options: {
   return join(resolvePluginDataDir(options), "cache");
 }
 
+export function resolveDefaultLoggingDir(options: {
+  cwd: string;
+  isProjectTrusted: boolean;
+  usedProjectConfig: boolean;
+}): string {
+  return join(resolvePluginDataDir(options), "logs", "requests");
+}
+
 /**
  * グローバル YAML を読み、trust 済みならプロジェクト YAML を上書きマージする。
  * `~/.modular-prompt-pi/` や `services.yaml` は読まない。
@@ -232,13 +240,61 @@ export function loadPiProviderConfig(
     }
   }
 
-  const withDefaultCacheDirs = applyDefaultCacheDirs(merged, {
+  const scope = { cwd, isProjectTrusted, usedProjectConfig };
+  const withDefaultCacheDirs = applyDefaultCacheDirs(merged, scope);
+  const withLogging = applyLoggingDefaults(withDefaultCacheDirs, scope);
+
+  return expandPathFields(withLogging, homedir());
+}
+
+/**
+ * リクエストログ dir を config.yaml から解決する（extract-log CLI 等）。
+ * 優先: マージ済み `logging.dir` > グローバルデフォルト。
+ * プロジェクト `config.yaml` はファイルが存在すれば trust 済みとしてマージする。
+ */
+export function resolveConfiguredRequestLogDir(
+  options: LoadPiProviderConfigOptions = {},
+): string {
+  const cwd = options.cwd ?? process.cwd();
+  const fileExists = options.fileExists ?? existsSync;
+  const paths = resolvePiProviderConfigPaths(cwd);
+  const projectConfigExists = fileExists(paths.project);
+  const isProjectTrusted = options.isProjectTrusted ?? projectConfigExists;
+
+  const config = loadPiProviderConfig({
+    ...options,
     cwd,
     isProjectTrusted,
-    usedProjectConfig,
   });
 
-  return expandPathFields(withDefaultCacheDirs, homedir());
+  if (config.logging?.dir) {
+    return config.logging.dir;
+  }
+
+  return resolveDefaultLoggingDir({
+    cwd,
+    isProjectTrusted: false,
+    usedProjectConfig: false,
+  });
+}
+
+function applyLoggingDefaults(
+  config: PiProviderYamlConfig,
+  scope: { cwd: string; isProjectTrusted: boolean; usedProjectConfig: boolean },
+): PiProviderYamlConfig {
+  if (!config.logging) {
+    return config;
+  }
+
+  const defaultDir = resolveDefaultLoggingDir(scope);
+  return {
+    ...config,
+    logging: {
+      level: config.logging.level ?? "info",
+      requestResponseLevel: config.logging.requestResponseLevel ?? "minimal",
+      dir: config.logging.dir ?? defaultDir,
+    },
+  };
 }
 
 function applyDefaultCacheDirs(

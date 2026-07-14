@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { join } from "node:path";
+import { homedir } from "node:os";
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import {
   DEFAULT_MLX_MODEL,
@@ -16,6 +17,7 @@ import {
   expandPath,
   loadPiProviderConfig,
   resolveDefaultCacheDir,
+  resolveConfiguredRequestLogDir,
 } from "../src/pi-provider-config.js";
 
 function globalConfigPath(): string {
@@ -204,5 +206,43 @@ drivers:
         usedProjectConfig: true,
       }),
     ).toBe(join("/project", CONFIG_DIR_NAME, PLUGIN_DIR_NAME, "cache"));
+  });
+
+  it("resolveConfiguredRequestLogDir は logging.dir を読む", () => {
+    const globalPath = globalConfigPath();
+    const files: Record<string, string> = {
+      [globalPath]: `
+logging:
+  requestResponseLevel: full
+  dir: ~/custom/request-logs
+`,
+    };
+
+    expect(
+      resolveConfiguredRequestLogDir({
+        cwd: "/project",
+        fileExists: (path) => path in files,
+        readFile: (path) => files[path]!,
+      }),
+    ).toBe(join(homedir(), "custom/request-logs"));
+  });
+
+  it("resolveConfiguredRequestLogDir は logging 未設定時グローバルデフォルト", () => {
+    const globalPath = globalConfigPath();
+    const files: Record<string, string> = {
+      [globalPath]: `
+models:
+  - model: m1
+`,
+    };
+
+    expect(
+      resolveConfiguredRequestLogDir({
+        cwd: "/project",
+        isProjectTrusted: false,
+        fileExists: (path) => path in files,
+        readFile: (path) => files[path]!,
+      }),
+    ).toBe(join(getAgentDir(), PLUGIN_DIR_NAME, "logs", "requests"));
   });
 });

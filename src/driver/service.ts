@@ -1,7 +1,9 @@
 import { AIService, type ApplicationConfig } from "@modular-prompt/driver";
 import { initCacheRuntime, resetCacheRuntime } from "../cache/runtime.js";
+import { initLoggingRuntime, resetLoggingRuntime } from "../logging/runtime.js";
 import { createApplicationConfig } from "../config.js";
 import type { PiProviderYamlConfig } from "../pi-provider-config.js";
+import { resolveConfiguredRequestLogDir } from "../pi-provider-config.js";
 
 let service: AIService | undefined;
 let config: ApplicationConfig | undefined;
@@ -19,6 +21,10 @@ export function initApplicationConfig(
 ): ApplicationConfig {
   config = createApplicationConfig(yamlConfig, overrides);
   initCacheRuntime(yamlConfig, config);
+  initLoggingRuntime(
+    yamlConfig,
+    yamlConfig?.logging?.dir || resolveConfiguredRequestLogDir(),
+  );
   service = undefined;
   return config;
 }
@@ -41,4 +47,5 @@ export function resetAIService(): void {
   service = undefined;
   config = undefined;
   resetCacheRuntime();
+  resetLoggingRuntime();
 }

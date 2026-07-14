@@ -5,12 +5,14 @@ import type {
   Model,
   SimpleStreamOptions,
 } from "@earendil-works/pi-ai";
-import { isAborted } from "@modular-prompt/driver";
+import { isAborted, formatCompletionPrompt } from "@modular-prompt/driver";
 import { sweepCacheDirBeforeWrite } from "../cache/runtime.js";
 import { findModelSpec, modelHasCacheDir } from "../config.js";
 import { getDriverForModel } from "../driver/pool.js";
+import { getCacheStats } from "../driver/cache-stats.js";
 import { getApplicationConfig } from "../driver/service.js";
 import { setActiveStreamSessionId } from "../cache/session-context.js";
+import { beginRequestLog } from "../logging/runtime.js";
 import { piContextToCompiledPrompt } from "./context-to-prompt.js";
 import { resolveStreamTermination } from "./finish-reason.js";
 import {
@@ -31,6 +33,8 @@ export async function bridgeDriverStreamToPi(
 ): Promise<void> {
   const output = createInitialAssistantMessage(model);
   piStream.push({ type: "start", partial: output });
+  const workPhase = "stream";
+  const requestLog = beginRequestLog();
 
   try {
     if (isAborted(options?.signal)) {
@@ -41,6 +45,7 @@ export async function bridgeDriverStreamToPi(
     }
 
     const appConfig = getApplicationConfig();
+    const modelSpec = findModelSpec(appConfig, model.id);
     const hasCacheDir = modelHasCacheDir(appConfig, model.id);
     setActiveStreamSessionId(options?.sessionId);
     const queryOpts = {
@@ -53,8 +58,24 @@ export async function bridgeDriverStreamToPi(
         : {}),
     };
 
+    if (requestLog) {
+      await requestLog.logIn("request", {
+        model: model.id,
+        sessionId: options?.sessionId,
+        messageCount: context.messages.length,
+        hasTools: Boolean(context.tools?.length),
+        cache: queryOpts.cache,
+      });
+      await requestLog.logDriverInfo(workPhase, {
+        model: model.id,
+        provider: modelSpec?.provider,
+        capabilities: modelSpec?.capabilities,
+        cacheDir: modelSpec?.driverOptions?.cacheDir,
+      });
+    }
+
     if (hasCacheDir && queryOpts.cache === true) {
-      const cacheDir = findModelSpec(appConfig, model.id)?.driverOptions?.cacheDir;
+      const cacheDir = modelSpec?.driverOptions?.cacheDir;
       if (cacheDir) {
         await sweepCacheDirBeforeWrite(cacheDir);
       }
@@ -62,6 +83,10 @@ export async function bridgeDriverStreamToPi(
 
     const driver = await getDriverForModel(model.id);
     const prompt = piContextToCompiledPrompt(context);
+
+    if (requestLog) {
+      await requestLog.logPrompt(workPhase, formatCompletionPrompt(prompt));
+    }
 
     const { stream, result } = await driver.streamQuery(prompt, queryOpts);
 
@@ -87,6 +112,19 @@ export async function bridgeDriverStreamToPi(
     const final = await result;
     output.usage = mapQueryResultUsageToPi(final, model);
 
+    if (requestLog) {
+      await requestLog.logLlmResponse(workPhase, {
+        content: final.content,
+        finishReason: final.finishReason,
+        usage: final.usage,
+        toolCalls: final.toolCalls,
+      });
+      const cacheStats = getCacheStats(driver);
+      if (cacheStats) {
+        await requestLog.logCacheStats(workPhase, cacheStats);
+      }
+    }
+
     const cleanedText = final.content ?? "";
     const textBlock = getTextBlock(output, textIndex);
     if (textBlock) {
@@ -108,12 +146,21 @@ export async function bridgeDriverStreamToPi(
 
     if (termination.event === "error") {
       const reason = termination.stopReason === "aborted" ? "aborted" : "error";
+      if (requestLog) {
+        await requestLog.logError(workPhase, reason, { stopReason: termination.stopReason });
+      }
       piStream.push({
         type: "error",
         reason,
         error: output,
       });
     } else {
+      if (requestLog) {
+        await requestLog.logOut("response", {
+          stopReason: termination.stopReason,
+          usage: output.usage,
+        });
+      }
       piStream.push({
         type: "done",
         reason: termination.doneReason!,
@@ -124,6 +171,9 @@ export async function bridgeDriverStreamToPi(
   } catch (error) {
     output.stopReason = isAborted(options?.signal) ? "aborted" : "error";
     output.errorMessage = error instanceof Error ? error.message : String(error);
+    if (requestLog) {
+      await requestLog.logError(workPhase, output.errorMessage, { stopReason: output.stopReason });
+    }
     piStream.push({ type: "error", reason: output.stopReason, error: output });
     piStream.end();
   }
