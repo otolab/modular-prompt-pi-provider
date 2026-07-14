@@ -6,8 +6,8 @@ import { createInitialAssistantMessage } from "../src/adapter/message-mapper.js"
 describe("emitToolCallsFromResult", () => {
   it("emits toolcall_start, delta, end per call", () => {
     const output = createInitialAssistantMessage({
-      api: "modular-prompt-mlx",
-      provider: "modular-prompt-mlx",
+      api: "modular-prompt-provider",
+      provider: "modular-prompt-provider",
       id: "test-model",
     });
     output.content.push({ type: "text", text: "" });

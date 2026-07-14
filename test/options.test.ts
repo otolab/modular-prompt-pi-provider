@@ -4,8 +4,8 @@ import type { Api, Model } from "@earendil-works/pi-ai";
 
 const model = {
   id: "test-model",
-  api: "modular-prompt-mlx",
-  provider: "modular-prompt-mlx",
+  api: "modular-prompt-provider",
+  provider: "modular-prompt-provider",
 } as Model<Api>;
 
 describe("piOptionsToQueryOptions", () => {

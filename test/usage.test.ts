@@ -5,8 +5,8 @@ import type { QueryResult } from "@modular-prompt/driver";
 
 const model = {
   id: "test-model",
-  api: "modular-prompt-mlx",
-  provider: "modular-prompt-mlx",
+  api: "modular-prompt-provider",
+  provider: "modular-prompt-provider",
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 } as Model<Api>;
 

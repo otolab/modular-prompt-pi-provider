@@ -1,9 +1,10 @@
 # 実装スコープ
 
-modular-prompt への要求と、本リポジトリ（`@modular-prompt/pi-provider-ext`）で実装する範囲の整理。
+modular-prompt への要求と、本リポジトリ（`@modular-prompt/pi-provider-ext`）で実装する **Pi プラグイン** `modular-prompt-provider` の範囲の整理。
 
 - driver 側の仕様: [modular-prompt#291](https://github.com/otolab/modular-prompt/issues/291#issuecomment-4933631155)（**対応済み** `@modular-prompt/driver` **0.14.0+**）
 - 実装計画・ファイル構成: [implementation-plan.md](./implementation-plan.md)
+- modular-prompt / Pi / プラグインの関係: [configuration.md](./configuration.md#modular-promptpi本プラグインの関係)
 
 ## 前提
 
