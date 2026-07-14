@@ -1,6 +1,6 @@
 # ログ（JSONL）
 
-Pi プラグインの LLM 呼び出しデバッグログ。sprite-claude のリクエスト JSONL を Pi 向けに縮小したもの。
+Pi プラグインの LLM 呼び出しデバッグログ。sprite-claude のリクエスト JSONL と同形式。
 
 設定の置き場所は [configuration.md](./configuration.md) を参照。
 
@@ -29,18 +29,20 @@ logging:
 | 種類 | パス | 単位 |
 |---|---|---|
 | リクエストログ | `{logging.dir}/{timestamp}-{pid}-{seqId}.jsonl` | 1 LLM 呼び出し |
-| プロセスログ | `{logging.dir}/../process-{pid}.jsonl` | cache eviction 等 |
+| サーバーログ | `{logging.dir}/../server-{pid}.jsonl` | cache eviction 等 |
 
 Pi セッション JSONL（`~/.pi/agent/sessions/`）とは別。
 
 ## LogEntry 形式
 
+sprite-claude と同じ `LogEntry`（`src/extract-log/types.ts` 参照）。
+
 ```typescript
 interface LogEntry {
-  timestamp: string;   // ISO 8601
+  timestamp: string;
   pid: number;
-  seqId: string;       // 0001, 0002, ...
-  phase: string;       // 通常 "stream"
+  seqId: string;
+  phase: string;       // in/out は request / response、その他は stream 等
   type: "in" | "out" | "prompt" | "llm_response" | "error" |
         "driver_info" | "cache_stats" | "eviction";
   data: unknown;
@@ -52,35 +54,33 @@ interface LogEntry {
 | type | 内容 |
 |---|---|
 | `in` | モデル ID、sessionId、メッセージ数、cache オプション |
-| `driver_info` | provider、capabilities、cacheDir（#25 discovery 前の暫定） |
-| `prompt` | `formatCompletionPrompt` 結果（`minimal` では省略なし、`none` では記録しない） |
-| `llm_response` | content / usage / finishReason（`minimal` は長さのみ） |
-| `cache_stats` | `cacheReadTokens` / `cacheWriteTokens`（KV 利用時） |
+| `driver_info` | provider、capabilities、cacheDir |
+| `prompt` | `formatCompletionPrompt` 結果 |
+| `llm_response` | content / usage / finishReason |
+| `cache_stats` | `cacheReadTokens` / `cacheWriteTokens` |
 | `error` | 例外・abort |
-| `eviction` | CacheManager sweep 結果（プロセスログ） |
+| `eviction` | CacheManager sweep（サーバーログ） |
 
 ## extract-log（調査 CLI）
 
-**JSONL 形式**は sprite-claude のリクエストログと互換（`LogEntry`・ファイル名 `{ts}-{pid}-{seqId}.jsonl`）。ただし sprite-claude 本体の `extract-log` はログ dir が `~/.sprite-claude/logs/requests` 固定のため、そのままでは pi-provider のログを読めない。
-
-本リポジトリの `npm run extract-log` は sprite-claude の **`summary` / `show` 相当を移植した縮小版**。`--messages` / `--raw` / `tasks` / `server` 等は含まない。フル機能が必要なら sprite-claude 側に dir 指定を足すか、Phase 2 で拡張する。
+[sprite-claude `extract-log`](https://github.com/otolab/sprite-claude/tree/main/packages/anthropic-server/src/analysis) を **`src/extract-log/` にコピー**し、`--dir` を追加したもの。別実装ではない。
 
 ```bash
 npm run extract-log -- summary
 npm run extract-log -- show --seq 0001
-npm run extract-log -- show --seq 1 --dir ~/.pi/agent/modular-prompt-provider/logs/requests
+npm run extract-log -- --dir ~/.pi/agent/modular-prompt-provider/logs/requests summary
 ```
 
-`--dir` 省略時のデフォルトは `~/.pi/agent/modular-prompt-provider/logs/requests`。
+デフォルト dir: `~/.pi/agent/modular-prompt-provider/logs/requests`（`logging.dir` と同じ）。
+
+sprite-claude と同様に `summary` / `show`（`--messages` / `--raw` / `--phase`）/ `tasks` / `phases` / `server` が使える。pi-provider のログは HTTP API 形式ではないため `--messages` の一部は空になる。
 
 ## Phase 分割（Issue #42）
 
 | Phase | 内容 | 状態 |
 |---|---|---|
-| Phase 1 | JSONL 記録（本ドキュメント） | 本 PR |
-| Phase 2 | `inspect`、driver `logEntries` 転記、ガイド拡充 | 将来 |
-| — | `ServerLogger`（HTTP サーバーなし） | 不要 |
-| — | `task_registration` / routing | 不要 |
+| Phase 1 | JSONL 記録 + extract-log 移植 | 本 PR |
+| Phase 2 | driver `logEntries` 転記、`inspect` 拡充 | 将来 |
 
 ## 関連 Issue
 

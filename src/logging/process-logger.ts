@@ -13,7 +13,7 @@ export class ProcessLogger {
 
   private eventsPath(): string {
     const base = dirname(this.policy.dir);
-    return `${base}/process-${this.pid}.jsonl`;
+    return `${base}/server-${this.pid}.jsonl`;
   }
 
   async log(type: LogEntry["type"], phase: string, data: unknown): Promise<void> {

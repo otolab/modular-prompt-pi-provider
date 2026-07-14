@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
-import { parseLogFile, summarizeRequestLog } from "../src/logging/extract-log.js";
+import { parseLogFile } from "../src/extract-log/log-reader.js";
 import {
   RequestLogger,
   resetRequestSeqCounter,
@@ -27,8 +27,7 @@ describe("RequestLogger", () => {
     await logger.logPrompt("stream", "hello");
     await logger.logOut("stream", { stopReason: "stop" });
 
-    const content = await readFile(logger.filePath, "utf-8");
-    const entries = parseLogFile(content);
+    const entries = parseLogFile(logger.filePath);
     expect(entries.map((entry) => entry.type)).toEqual(["in", "prompt", "out"]);
     expect(entries[0]?.data).toEqual({ model: "m1" });
   });
@@ -48,37 +47,11 @@ describe("RequestLogger", () => {
       finishReason: "stop",
       usage: { promptTokens: 1, completionTokens: 2 },
     });
-    const content = await readFile(logger.filePath, "utf-8");
-    const entry = parseLogFile(content)[0];
+    const entry = parseLogFile(logger.filePath)[0];
     expect(entry?.data).toMatchObject({
       hasContent: true,
       contentLength: 11,
       finishReason: "stop",
     });
-  });
-});
-
-describe("extract-log helpers", () => {
-  it("summarizeRequestLog が types を集約する", () => {
-    const summary = summarizeRequestLog("test.jsonl", [
-      {
-        timestamp: "2026-01-01T00:00:00.000Z",
-        pid: 1,
-        seqId: "0001",
-        phase: "stream",
-        type: "in",
-        data: {},
-      },
-      {
-        timestamp: "2026-01-01T00:00:01.000Z",
-        pid: 1,
-        seqId: "0001",
-        phase: "stream",
-        type: "out",
-        data: {},
-      },
-    ]);
-    expect(summary.types).toEqual(["in", "out"]);
-    expect(summary.seqId).toBe("0001");
   });
 });

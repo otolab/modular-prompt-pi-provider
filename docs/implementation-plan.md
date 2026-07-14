@@ -42,7 +42,7 @@ modular-prompt-pi-provider/
       request-logger.ts      ✅（リクエスト JSONL）
       process-logger.ts      ✅（eviction 等）
       runtime.ts             ✅
-      extract-log.ts         ✅（summary / show）
+      extract-log.ts         ✅（sprite-claude 移植 + --dir）
     driver/
       service.ts             # AIService シングルトン ✅
       pool.ts                # AIDriver 単一保持・切替 ✅

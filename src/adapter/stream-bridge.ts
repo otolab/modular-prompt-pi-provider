@@ -32,7 +32,7 @@ export async function bridgeDriverStreamToPi(
 ): Promise<void> {
   const output = createInitialAssistantMessage(model);
   piStream.push({ type: "start", partial: output });
-  const phase = "stream";
+  const workPhase = "stream";
   const requestLog = beginRequestLog();
 
   try {
@@ -58,14 +58,14 @@ export async function bridgeDriverStreamToPi(
     };
 
     if (requestLog) {
-      await requestLog.logIn(phase, {
+      await requestLog.logIn("request", {
         model: model.id,
         sessionId: options?.sessionId,
         messageCount: context.messages.length,
         hasTools: Boolean(context.tools?.length),
         cache: queryOpts.cache,
       });
-      await requestLog.logDriverInfo(phase, {
+      await requestLog.logDriverInfo(workPhase, {
         model: model.id,
         provider: modelSpec?.provider,
         capabilities: modelSpec?.capabilities,
@@ -84,7 +84,7 @@ export async function bridgeDriverStreamToPi(
     const prompt = piContextToCompiledPrompt(context);
 
     if (requestLog) {
-      await requestLog.logPrompt(phase, formatCompletionPrompt(prompt));
+      await requestLog.logPrompt(workPhase, formatCompletionPrompt(prompt));
     }
 
     const { stream, result } = await driver.streamQuery(prompt, queryOpts);
@@ -112,14 +112,14 @@ export async function bridgeDriverStreamToPi(
     output.usage = mapQueryResultUsageToPi(final, model);
 
     if (requestLog) {
-      await requestLog.logLlmResponse(phase, {
+      await requestLog.logLlmResponse(workPhase, {
         content: final.content,
         finishReason: final.finishReason,
         usage: final.usage,
         toolCalls: final.toolCalls,
       });
       if (final.usage?.cacheReadTokens || final.usage?.cacheWriteTokens) {
-        await requestLog.logCacheStats(phase, {
+        await requestLog.logCacheStats(workPhase, {
           cacheReadTokens: final.usage.cacheReadTokens ?? 0,
           cacheWriteTokens: final.usage.cacheWriteTokens ?? 0,
           promptTokens: final.usage.promptTokens,
@@ -150,7 +150,7 @@ export async function bridgeDriverStreamToPi(
     if (termination.event === "error") {
       const reason = termination.stopReason === "aborted" ? "aborted" : "error";
       if (requestLog) {
-        await requestLog.logError(phase, reason, { stopReason: termination.stopReason });
+        await requestLog.logError(workPhase, reason, { stopReason: termination.stopReason });
       }
       piStream.push({
         type: "error",
@@ -159,7 +159,7 @@ export async function bridgeDriverStreamToPi(
       });
     } else {
       if (requestLog) {
-        await requestLog.logOut(phase, {
+        await requestLog.logOut("response", {
           stopReason: termination.stopReason,
           usage: output.usage,
         });
@@ -175,7 +175,7 @@ export async function bridgeDriverStreamToPi(
     output.stopReason = isAborted(options?.signal) ? "aborted" : "error";
     output.errorMessage = error instanceof Error ? error.message : String(error);
     if (requestLog) {
-      await requestLog.logError(phase, output.errorMessage, { stopReason: output.stopReason });
+      await requestLog.logError(workPhase, output.errorMessage, { stopReason: output.stopReason });
     }
     piStream.push({ type: "error", reason: output.stopReason, error: output });
     piStream.end();
