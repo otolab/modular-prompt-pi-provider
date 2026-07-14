@@ -9,13 +9,14 @@
 | 1 | [scope.md](./scope.md) | 実装スコープ（driver 要求 / 本リポジトリ範囲） |
 | 2 | [architecture.md](./architecture.md) | 全体構成・責務分担 |
 | 3 | [pi-apis.md](./pi-apis.md) | Pi 拡張 API（`streamSimple` 以外のイベント含む） |
-| 4 | [modular-prompt-apis.md](./modular-prompt-apis.md) | 消費する `@modular-prompt/driver` API |
-| 5 | [adapter.md](./adapter.md) | 型変換・`CompiledPrompt` 組み立て |
-| 6 | [streaming.md](./streaming.md) | 生ストリーム → Pi イベント（増分パーサ） |
-| 7 | [abort-spec.md](./abort-spec.md) | AbortSignal 要求仕様 |
-| 8 | [compaction.md](./compaction.md) | compact・overflow 回復 |
-| 9 | [implementation-plan.md](./implementation-plan.md) | ファイル構成・テスト |
-| 10 | [distribution.md](./distribution.md) | 配布・npm・インストール |
+| 4 | [configuration.md](./configuration.md) | 設定ファイル配置・Pi 設定との役割分担 |
+| 5 | [modular-prompt-apis.md](./modular-prompt-apis.md) | 消費する `@modular-prompt/driver` API |
+| 6 | [adapter.md](./adapter.md) | 型変換・`CompiledPrompt` 組み立て |
+| 7 | [streaming.md](./streaming.md) | 生ストリーム → Pi イベント（増分パーサ） |
+| 8 | [abort-spec.md](./abort-spec.md) | AbortSignal 要求仕様 |
+| 9 | [compaction.md](./compaction.md) | compact・overflow 回復 |
+| 10 | [implementation-plan.md](./implementation-plan.md) | ファイル構成・テスト |
+| 11 | [distribution.md](./distribution.md) | 配布・npm・インストール |
 
 ## 外部参照
 

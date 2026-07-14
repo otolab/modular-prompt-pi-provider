@@ -1,6 +1,8 @@
 # @modular-prompt/pi-provider-ext
 
-[Pi](https://github.com/earendil-works/pi) 向け Pi パッケージ。`@modular-prompt/driver` の MLX ドライバをカスタム LLM プロバイダとして登録する。
+[Pi](https://github.com/earendil-works/pi) 向け **プラグイン**（`pi install` で入る拡張）。[`@modular-prompt/driver`](https://github.com/otolab/modular-prompt) を Pi のカスタム LLM プロバイダ **`modular-prompt-provider`** として登録する。
+
+modular-prompt はプロンプトフレームワーク本体、本リポジトリはその driver 層を Pi に載せるアダプタ。関係の詳細は [docs/configuration.md](./docs/configuration.md#modular-promptpi本プラグインの関係)。
 
 ## パッケージ名について
 
@@ -43,13 +45,18 @@ npm run test:run   # ユニットテスト（MLX 非起動・逐次実行）
 
 Pi は [jiti](https://github.com/unjs/jiti) で TypeScript を直接ロードするため、ビルドは必須ではない。
 
-### モデル差し替え（開発時）
+### モデル・設定
+
+優先度: `.pi/modular-prompt-provider/config.yaml`（trust 後）> `~/.pi/agent/modular-prompt-provider/config.yaml` > `MODULAR_PROMPT_PI_MODEL` > コードデフォルト。
 
 ```bash
+mkdir -p ~/.pi/agent/modular-prompt-provider
+cp modular-prompt-provider/config.yaml.example ~/.pi/agent/modular-prompt-provider/config.yaml
+# または
 export MODULAR_PROMPT_PI_MODEL=mlx-community/gemma-4-26B-A4B-it-heretic-4bit
 ```
 
-デフォルトは上記モデル。`src/config.ts` の `ApplicationConfig.models` で複数登録も可能。
+詳細: [docs/configuration.md](./docs/configuration.md)
 
 ## ドキュメント
 
@@ -59,6 +66,7 @@ export MODULAR_PROMPT_PI_MODEL=mlx-community/gemma-4-26B-A4B-it-heretic-4bit
 |------|------|
 | [scope](./docs/scope.md) | 実装スコープ（driver 要求 / 本リポジトリ） |
 | [architecture](./docs/architecture.md) | 全体構成・責務分担 |
+| [configuration](./docs/configuration.md) | プラグイン設定・modular-prompt との関係 |
 | [pi-apis](./docs/pi-apis.md) | Pi 拡張 API（イベント含む） |
 | [modular-prompt-apis](./docs/modular-prompt-apis.md) | driver 消費 API |
 | [adapter](./docs/adapter.md) | 型変換 |
@@ -70,7 +78,7 @@ export MODULAR_PROMPT_PI_MODEL=mlx-community/gemma-4-26B-A4B-it-heretic-4bit
 
 ## 関連
 
-- [modular-prompt](https://github.com/otolab/modular-prompt) — MLX ドライバ本体（**driver 0.14.0+** 必須）
+- [modular-prompt](https://github.com/otolab/modular-prompt) — プロンプトフレームワーク本体（本プラグインはその `driver` パッケージを利用。**driver 0.14.0+** 必須）
 - [modular-prompt#291](https://github.com/otolab/modular-prompt/issues/291) — driver 側対応（完了）
 - [Pi custom provider](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/custom-provider.md)
 

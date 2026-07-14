@@ -1,5 +1,6 @@
 import { AIService, type ApplicationConfig } from "@modular-prompt/driver";
 import { createApplicationConfig } from "../config.js";
+import type { PiProviderYamlConfig } from "../pi-provider-config.js";
 
 let service: AIService | undefined;
 let config: ApplicationConfig | undefined;
@@ -8,6 +9,15 @@ export function getApplicationConfig(): ApplicationConfig {
   if (!config) {
     config = createApplicationConfig();
   }
+  return config;
+}
+
+export function initApplicationConfig(
+  yamlConfig?: PiProviderYamlConfig,
+  overrides?: Partial<ApplicationConfig>,
+): ApplicationConfig {
+  config = createApplicationConfig(yamlConfig, overrides);
+  service = undefined;
   return config;
 }
 
