@@ -13,7 +13,6 @@ function baseSpec(overrides: Partial<ModelSpec> = {}): ModelSpec {
     model: "mlx-community/test-model",
     provider: "mlx",
     capabilities: ["streaming", "local", "japanese", "chat"],
-    maxInputTokens: 128_000,
     maxOutputTokens: 8_192,
     priority: 10,
     ...overrides,
@@ -89,6 +88,23 @@ describe("applyMlxCapabilitiesToModelSpec", () => {
     );
     expect(enriched.maxInputTokens).toBe(16_384);
   });
+
+  it("YAML で maxInputTokens: 128000 明示時も discovery は上書きしない", () => {
+    const enriched = applyMlxCapabilitiesToModelSpec(
+      baseSpec({ maxInputTokens: 128_000 }),
+      sampleCaps({ modelMaxLength: 65_536 }),
+    );
+    expect(enriched.maxInputTokens).toBe(128_000);
+  });
+
+  it("maxInputTokens 未設定かつ discovery 値なしはデフォルトにフォールバック", () => {
+    const caps = sampleCaps();
+    const enriched = applyMlxCapabilitiesToModelSpec(baseSpec(), {
+      ...caps,
+      features: { ...caps.features, modelMaxLength: undefined },
+    });
+    expect(enriched.maxInputTokens).toBe(128_000);
+  });
 });
 
 describe("discoverModelSpec", () => {
@@ -112,13 +128,16 @@ describe("discoverModelSpec", () => {
     expect(result.capabilities).toContain("reasoning");
   });
 
-  it("probe 失敗時は元の spec を返す", async () => {
+  it("probe 失敗時は元の spec を返し warn する", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const aiService = {
       createDriver: vi.fn().mockRejectedValue(new Error("mlx unavailable")),
     } as unknown as AIService;
 
     const spec = baseSpec({ maxInputTokens: 12_000 });
     await expect(discoverModelSpec(spec, aiService)).resolves.toEqual(spec);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 

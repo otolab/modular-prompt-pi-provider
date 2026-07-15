@@ -44,6 +44,7 @@ export function isModelDiscoveryEnabled(): boolean {
 
 /**
  * MLX `getCapabilities()` 結果を ModelSpec にマージする（純関数）。
+ * `maxInputTokens` 未設定時のみ `modelMaxLength` を反映する（YAML 明示値は優先）。
  */
 export function applyMlxCapabilitiesToModelSpec(
   spec: ModelSpec,
@@ -51,11 +52,11 @@ export function applyMlxCapabilitiesToModelSpec(
 ): ModelSpec {
   const discoveredMaxInput = caps.features.modelMaxLength;
   const maxInputTokens =
-    spec.maxInputTokens !== DEFAULT_MAX_INPUT_TOKENS
+    spec.maxInputTokens != null
       ? spec.maxInputTokens
       : typeof discoveredMaxInput === "number" && discoveredMaxInput > 0
         ? discoveredMaxInput
-        : spec.maxInputTokens;
+        : DEFAULT_MAX_INPUT_TOKENS;
 
   return {
     ...spec,
@@ -128,10 +129,13 @@ export async function discoverModelSpec(
     driver = await aiService.createDriver(spec);
     const caps = await probeDriverCapabilities(driver);
     if (!caps) {
+      console.warn(`[discovery] getCapabilities unavailable for ${spec.model}`);
       return spec;
     }
     return applyMlxCapabilitiesToModelSpec(spec, caps);
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[discovery] probe failed for ${spec.model}: ${message}`);
     return spec;
   } finally {
     await driver?.close();
