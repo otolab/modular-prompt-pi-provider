@@ -123,6 +123,22 @@ logging:
 
 `~` はロード時に展開する。`cacheDir` / `logging.dir` 未指定時は上記デフォルトをプラグインデータ dir から組み立てる。
 
+### モデル discovery（#25）
+
+`models[]` に列挙した MLX モデルは、プラグイン起動時（`loadAndRegister` / `session_start`）に `MlxDriver.getCapabilities()` でプローブし、`contextWindow`（`maxInputTokens`）・`reasoning`・`input`（vision）・`capabilities` タグを enrich してから `registerProvider` する。
+
+| 項目 | 挙動 |
+|---|---|
+| 複数モデル | YAML `models[]` で宣言（固定 1 モデルに限定しない） |
+| `maxInputTokens` | capabilities の `modelMaxLength`（YAML で `maxInputTokens` を**キーごと省略**した場合のみ discovery が反映。明示値は優先） |
+| `reasoning` | `specialTokens.thinking` / `reasoning` の有無 |
+| `vision` | `specialTokens.vision` かつ `driverOptions.textOnly` でない |
+| `tools` | `chatTemplate.toolCallFormat` または `tool_call` トークン |
+| 失敗時 | YAML / コードデフォルトのまま登録（起動継続）。`console.warn` に `[discovery]` ログ |
+| 無効化 | `SKIP_MODEL_DISCOVERY=1`（テスト用） |
+
+capabilities ベースのモデル**選択**（`selection`）は [#40](https://github.com/otolab/modular-prompt-pi-provider/issues/40) の範囲。
+
 ## KV キャッシュ管理（#30 Phase 2）
 
 `cache` セクションは **pi-provider 側の `CacheManager`** が消費する。driver の `MlxCacheController` は retain/release ヒントのみで、TTL やディスク上限は持たない。

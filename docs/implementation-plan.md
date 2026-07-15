@@ -58,7 +58,7 @@ modular-prompt-pi-provider/
       tools.ts               # P1
       incremental-parser.ts  # P2
     driver/
-      discovery.ts           # P1（getCapabilities → ModelSpec 拡張）
+      discovery.ts           # P1（getCapabilities → ModelSpec 拡張）✅
     hooks/
       overflow-rewrite.ts    # P2
       compaction.ts          # P1
@@ -151,6 +151,7 @@ modular-prompt-pi-provider/
 | `test/log-policy.test.ts` | `resolveLoggingPolicy` | ✅ |
 | `test/request-logger.test.ts` | JSONL 記録 | ✅ |
 | `test/cache-stats.test.ts` | `getCacheStats` | ✅ |
+| `test/discovery.test.ts` | `getCapabilities` → ModelSpec enrich | ✅ |
 | `test/stream-events.test.ts` | ストリーム契約（TestDriver） | ✅ |
 | `tests/integration/cache-hit.test.ts` | MLX KV キャッシュ（実機） | ✅ |
 | `incremental-parser.test.ts` | thinking タグ分割 | 未実装（P2） |

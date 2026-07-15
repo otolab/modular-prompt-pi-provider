@@ -20,7 +20,7 @@ export default async function (pi: ExtensionAPI): Promise<void> {
 |---|---|
 | `export default` ファクトリ | jiti が TS を直接ロード |
 | `async` 可 | 起動前にモデル一覧を確定（`pi --list-models` 含む） |
-| ファクトリ内で MLX 起動しない | session なし invocation があり得る |
+| ファクトリ内で MLX 起動しない | 通常の `streamSimple` 呼び出し前は起動しない。**例外**: [#25](https://github.com/otolab/modular-prompt-pi-provider/issues/25) のモデル discovery は `loadAndRegister` で `getCapabilities()` プローブのため MLX を短時間起動する（[configuration.md](./configuration.md#モデル-discovery25) 参照） |
 
 ## `pi.registerProvider(name, config)`
 
