@@ -13,6 +13,7 @@ describe("agentic-logging", () => {
       taskType: "planning",
       taskName: "plan",
       instruction: "plan tasks",
+      result: "",
       toolCallLog: [
         {
           name: "think",
@@ -22,6 +23,7 @@ describe("agentic-logging", () => {
             reason: "needed",
             driverRole: "chat",
           },
+          result: null,
         },
         {
           name: "__register_task",
@@ -30,6 +32,7 @@ describe("agentic-logging", () => {
             taskType: "act",
             instruction: "do work",
           },
+          result: null,
         },
       ],
     },
@@ -38,7 +41,7 @@ describe("agentic-logging", () => {
       taskName: "analyze",
       instruction: "read the request",
       result: "done",
-      pendingToolCalls: [{ id: "tc1", name: "search", arguments: "{}" }],
+      pendingToolCalls: [{ id: "tc1", name: "search", arguments: {} }],
     },
   ];
 
@@ -63,7 +66,7 @@ describe("agentic-logging", () => {
 
   it("pendingToolCalls を平坦化する", () => {
     expect(extractPendingToolCalls(executionLog)).toEqual([
-      { id: "tc1", name: "search", arguments: "{}" },
+      { id: "tc1", name: "search", arguments: {} },
     ]);
   });
 
@@ -73,7 +76,7 @@ describe("agentic-logging", () => {
         taskName: "plan",
         taskType: "planning",
         instruction: "plan tasks",
-        result: undefined,
+        result: "",
         toolCallLog: executionLog[0]!.toolCallLog,
         pendingToolCalls: undefined,
       },
