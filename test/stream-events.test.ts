@@ -273,4 +273,30 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     expect(events.at(-1)?.type).toBe("done");
     expect(message.stopReason).toBe("stop");
   });
+
+  it("未登録 model.id でフォールバックも無効ならエラーメッセージに processes.default を含める", async () => {
+    const config = createResolvedProviderConfig({
+      models: {
+        fallback: {
+          provider: "mlx",
+          model: "mlx-community/fallback",
+          defaultQueryOptions: { maxTokens: 8192 },
+        },
+      },
+      processes: {
+        default: { model: "fallback" },
+      },
+    });
+    config.processes.default = { model: "broken-fallback" };
+    vi.mocked(getResolvedProviderConfig).mockReturnValue(config);
+
+    const unknownModel = { ...model, id: "unknown-id" };
+    const { message } = await collectStream(
+      streamModularPromptMlx(unknownModel, baseContext()),
+    );
+
+    expect(message.errorMessage).toContain("unknown-id");
+    expect(message.errorMessage).toContain("broken-fallback");
+    expect(message.errorMessage).toContain("not a registered");
+  });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeProviderConfig } from "../src/config/normalize-config.js";
 import {
+  formatStreamSelectionError,
   resolveDefaultSelection,
   resolveProcessFallback,
   resolveSelection,
@@ -21,6 +22,9 @@ function baseConfig() {
         defaultQueryOptions: { maxTokens: 8192 },
         disabled: true,
       },
+    },
+    modelSets: {
+      default: { chat: "gemma", default: "gemma" },
     },
     workflow: {
       agentic: {
@@ -88,6 +92,42 @@ describe("resolveStreamSelection", () => {
     if (selection?.kind === "logical") {
       expect(selection.logicalName).toBe("gemma");
     }
+  });
+});
+
+describe("formatStreamSelectionError", () => {
+  it("processes.default 未設定時は models 登録を促す", () => {
+    const config = normalizeProviderConfig({
+      models: {
+        gemma: {
+          provider: "mlx",
+          model: "mlx-community/gemma",
+          defaultQueryOptions: { maxTokens: 8192 },
+        },
+      },
+    });
+    expect(formatStreamSelectionError("unknown", config)).toContain(
+      'Unknown model "unknown"',
+    );
+    expect(formatStreamSelectionError("unknown", config)).toContain("config.yaml models");
+  });
+
+  it("processes.default が未登録のとき両方を示す", () => {
+    const config = normalizeProviderConfig({
+      models: {
+        gemma: {
+          provider: "mlx",
+          model: "mlx-community/gemma",
+          defaultQueryOptions: { maxTokens: 8192 },
+        },
+      },
+      processes: {
+        default: { model: "gemma" },
+      },
+    });
+    config.processes.default = { model: "also-missing" };
+    expect(formatStreamSelectionError("unknown", config)).toContain("also-missing");
+    expect(formatStreamSelectionError("unknown", config)).toContain("not a registered");
   });
 });
 

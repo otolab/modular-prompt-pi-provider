@@ -51,6 +51,30 @@ export function resolveProcessFallback(
   return resolveSelection(fallbackModel, config);
 }
 
+/** stream 時の model 解決失敗メッセージ */
+export function formatStreamSelectionError(
+  modelId: string,
+  config: ResolvedProviderConfig,
+): string {
+  const fallbackModel = config.processes.default?.model;
+  if (!fallbackModel) {
+    return `Unknown model "${modelId}". Register it in config.yaml models.`;
+  }
+
+  const fallbackSelection = resolveSelection(fallbackModel, config);
+  if (!fallbackSelection) {
+    return (
+      `Unknown model "${modelId}" and processes.default.model "${fallbackModel}" ` +
+      "is not a registered logical model or virtualModel."
+    );
+  }
+
+  return (
+    `Unknown model "${modelId}". Register it in config.yaml models ` +
+    `(processes.default is "${fallbackModel}").`
+  );
+}
+
 /** modelId 未指定時に default 論理モデルを返す */
 export function resolveDefaultSelection(
   config: ResolvedProviderConfig,

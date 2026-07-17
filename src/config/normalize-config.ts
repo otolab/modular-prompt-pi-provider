@@ -11,6 +11,7 @@ import type {
   ResolvedProviderConfig,
   ResolvedVirtualModel,
 } from "./types.js";
+import { validateLogicalModelDefinition, validateProviderConfig } from "./validate-config.js";
 
 const DEFAULT_CAPABILITIES: DriverCapability[] = [
   "streaming",
@@ -203,6 +204,7 @@ export function resolveLogicalModels(
 
   for (const [logicalName, rawDefinition] of Object.entries(yaml.models)) {
     const definition = rawDefinition as LogicalModelDefinition;
+    validateLogicalModelDefinition(logicalName, definition);
     result.set(logicalName, logicalModelToSpec(logicalName, definition, providers));
   }
 
@@ -266,7 +268,7 @@ export function normalizeProviderConfig(
       .map((model) => model.spec),
   };
 
-  return {
+  const resolved: ResolvedProviderConfig = {
     providers,
     logicalModels,
     modelSets,
@@ -276,4 +278,8 @@ export function normalizeProviderConfig(
     defaultLogicalModel,
     applicationConfig,
   };
+
+  validateProviderConfig(resolved);
+
+  return resolved;
 }

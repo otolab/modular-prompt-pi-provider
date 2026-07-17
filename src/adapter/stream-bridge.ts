@@ -7,7 +7,7 @@ import type {
 } from "@earendil-works/pi-ai";
 import { isAborted, formatCompletionPrompt } from "@modular-prompt/driver";
 import { sweepCacheDirBeforeWrite } from "../cache/runtime.js";
-import { findModelSpec, modelHasCacheDir, resolveStreamSelection } from "../config.js";
+import { findModelSpec, formatStreamSelectionError, modelHasCacheDir, resolveStreamSelection } from "../config.js";
 import { getDriverForLogicalModel } from "../driver/pool.js";
 import { getCacheStats } from "../driver/cache-stats.js";
 import { getResolvedProviderConfig } from "../driver/service.js";
@@ -52,7 +52,7 @@ export async function bridgeDriverStreamToPi(
     const selection = resolveStreamSelection(model.id, resolvedConfig);
 
     if (!selection) {
-      throw new Error(`Unknown model "${model.id}". Register it in config.yaml models.`);
+      throw new Error(formatStreamSelectionError(model.id, resolvedConfig));
     }
 
     if (selection.kind === "virtual") {

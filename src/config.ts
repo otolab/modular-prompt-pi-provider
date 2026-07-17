@@ -120,4 +120,5 @@ export {
   resolveProcessFallback,
   resolveDefaultSelection,
   resolveStreamSelection,
+  formatStreamSelectionError,
 } from "./config/resolve-selection.js";
