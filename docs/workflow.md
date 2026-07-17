@@ -56,9 +56,9 @@ workflow:
 ```
 
 - `virtualModel` は models とは別名前空間
-- Phase 1: Pi 一覧に載せるのみ。選択時は Phase 2 エラー
-- Phase 2: passthrough workflow 実行
-- Phase 3: agentic workflow 実行
+- Phase 1: Pi 一覧に載せるのみ。agentic 選択時は Phase 3 エラー
+- Phase 2: 論理モデルは暗黙 passthrough workflow 経由で実行
+- Phase 3: virtualModel + agentic workflow 実行
 
 ### processes
 
@@ -73,8 +73,9 @@ LLM を呼ぶ処理ごとのモデル割当。Pi には非表示。
 
 | 値 | 解決 |
 |---|---|
-| models 論理名 | `resolveSelection` → 論理モデル → driver |
-| virtualModel 名 | `resolveSelection` → workflow（Phase 2 未実装） |
+| models 論理名 | `resolveStreamSelection` → passthrough workflow → driver |
+| 未登録 id | `processes.default` にフォールバック（設定時） |
+| virtualModel 名 | `resolveSelection` → workflow（Phase 3 未実装） |
 
 ### Driver 保持
 
@@ -95,8 +96,8 @@ mergeQueryOptions(
 
 | Phase | 内容 | 状態 |
 |---|---|---|
-| 1 | 型・正規化・名前解決・driver レジストリ・ドキュメント | 本 PR |
-| 2 | passthrough workflow + stream 配線 | 未着手 |
+| 1 | 型・正規化・名前解決・driver レジストリ・ドキュメント | 完了 |
+| 2 | passthrough workflow + stream 配線 | 本 PR |
 | 3 | virtualModel + agentic workflow | 未着手 |
 
 ## 関連ファイル
@@ -105,10 +106,12 @@ mergeQueryOptions(
 |---|---|
 | `src/config/types.ts` | 型定義 |
 | `src/config/normalize-config.ts` | YAML → ResolvedProviderConfig |
-| `src/config/resolve-selection.ts` | model.id 解決 |
+| `src/config/resolve-selection.ts` | model.id 解決・フォールバック |
+| `src/workflow/passthrough.ts` | passthrough workflow 実行 |
+| `src/workflow/runner.ts` | 論理モデル向け workflow 入口 |
 | `src/driver/model-registry.ts` | 論理モデルごと driver |
 | `src/driver/model-catalog.ts` | Pi モデル一覧生成 |
-| `src/adapter/stream-bridge.ts` | 解決 + stream 橋渡し |
+| `src/adapter/stream-bridge.ts` | 解決 + workflow + stream 橋渡し |
 
 ## 参照
 

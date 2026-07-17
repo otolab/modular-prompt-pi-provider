@@ -27,6 +27,19 @@ export function resolveSelection(
   return undefined;
 }
 
+/** Pi stream 用の model 解決（未登録 id → processes.default） */
+export function resolveStreamSelection(
+  modelId: string,
+  config: ResolvedProviderConfig,
+): ModelSelection | undefined {
+  const direct = resolveSelection(modelId, config);
+  if (direct) {
+    return direct;
+  }
+
+  return resolveProcessFallback(config);
+}
+
 /** processes.default — model id 未決時のフォールバック */
 export function resolveProcessFallback(
   config: ResolvedProviderConfig,
@@ -36,6 +49,22 @@ export function resolveProcessFallback(
     return undefined;
   }
   return resolveSelection(fallbackModel, config);
+}
+
+/** stream 時の model 解決失敗メッセージ（resolveStreamSelection が undefined のときのみ呼ぶ） */
+export function formatStreamSelectionError(
+  modelId: string,
+  config: ResolvedProviderConfig,
+): string {
+  const fallbackModel = config.processes.default?.model;
+  if (!fallbackModel) {
+    return `Unknown model "${modelId}". Register it in config.yaml models.`;
+  }
+
+  return (
+    `Unknown model "${modelId}" and processes.default.model "${fallbackModel}" ` +
+    "is not a registered logical model or virtualModel."
+  );
 }
 
 /** modelId 未指定時に default 論理モデルを返す */

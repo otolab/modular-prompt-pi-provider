@@ -217,7 +217,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     expect(capturedOptions?.cache).toBe(false);
   });
 
-  it("virtualModel 選択時は Phase 2 未実装エラー", async () => {
+  it("virtualModel 選択時は Phase 3 未実装エラー", async () => {
     vi.mocked(getResolvedProviderConfig).mockReturnValue(
       createResolvedProviderConfig({
         models: {
@@ -242,6 +242,61 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     );
 
     expect(events.at(-1)?.type).toBe("error");
-    expect(message.errorMessage).toContain("workflow execution not implemented (Phase 2)");
+    expect(message.errorMessage).toContain("workflow execution not implemented (Phase 3)");
+  });
+
+  it("未登録 model.id は processes.default にフォールバックしてストリームする", async () => {
+    vi.mocked(getResolvedProviderConfig).mockReturnValue(
+      createResolvedProviderConfig({
+        models: {
+          fallback: {
+            provider: "mlx",
+            model: "mlx-community/fallback",
+            defaultQueryOptions: { maxTokens: 8192 },
+          },
+        },
+        processes: {
+          default: { model: "fallback" },
+        },
+      }),
+    );
+    vi.mocked(getDriverForLogicalModel).mockResolvedValue(
+      new TestDriver({ responses: ["from-fallback"] }),
+    );
+
+    const unknownModel = { ...model, id: "unknown-id" };
+    const { events, message } = await collectStream(
+      streamModularPromptMlx(unknownModel, baseContext()),
+    );
+
+    expect(getDriverForLogicalModel).toHaveBeenCalledWith("fallback");
+    expect(events.at(-1)?.type).toBe("done");
+    expect(message.stopReason).toBe("stop");
+  });
+
+  it("未登録 model.id でフォールバックも無効ならエラーメッセージに processes.default を含める", async () => {
+    const config = createResolvedProviderConfig({
+      models: {
+        fallback: {
+          provider: "mlx",
+          model: "mlx-community/fallback",
+          defaultQueryOptions: { maxTokens: 8192 },
+        },
+      },
+      processes: {
+        default: { model: "fallback" },
+      },
+    });
+    config.processes.default = { model: "broken-fallback" };
+    vi.mocked(getResolvedProviderConfig).mockReturnValue(config);
+
+    const unknownModel = { ...model, id: "unknown-id" };
+    const { message } = await collectStream(
+      streamModularPromptMlx(unknownModel, baseContext()),
+    );
+
+    expect(message.errorMessage).toContain("unknown-id");
+    expect(message.errorMessage).toContain("broken-fallback");
+    expect(message.errorMessage).toContain("not a registered");
   });
 });

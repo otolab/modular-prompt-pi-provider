@@ -120,6 +120,9 @@ describe("normalizeProviderConfig", () => {
           defaultQueryOptions: { maxTokens: 8192 },
         },
       },
+      modelSets: {
+        default: { chat: "gemma", default: "gemma" },
+      },
       workflow: {
         agentic: {
           type: "agentic",
