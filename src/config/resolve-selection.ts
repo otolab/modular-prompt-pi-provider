@@ -51,7 +51,7 @@ export function resolveProcessFallback(
   return resolveSelection(fallbackModel, config);
 }
 
-/** stream 時の model 解決失敗メッセージ */
+/** stream 時の model 解決失敗メッセージ（resolveStreamSelection が undefined のときのみ呼ぶ） */
 export function formatStreamSelectionError(
   modelId: string,
   config: ResolvedProviderConfig,
@@ -61,17 +61,9 @@ export function formatStreamSelectionError(
     return `Unknown model "${modelId}". Register it in config.yaml models.`;
   }
 
-  const fallbackSelection = resolveSelection(fallbackModel, config);
-  if (!fallbackSelection) {
-    return (
-      `Unknown model "${modelId}" and processes.default.model "${fallbackModel}" ` +
-      "is not a registered logical model or virtualModel."
-    );
-  }
-
   return (
-    `Unknown model "${modelId}". Register it in config.yaml models ` +
-    `(processes.default is "${fallbackModel}").`
+    `Unknown model "${modelId}" and processes.default.model "${fallbackModel}" ` +
+    "is not a registered logical model or virtualModel."
   );
 }
 
