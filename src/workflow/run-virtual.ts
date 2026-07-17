@@ -2,13 +2,16 @@ import type { AIDriver } from "@modular-prompt/driver";
 import type { ResolvedProviderConfig, VirtualModelSelection } from "../config/types.js";
 import { resolvePassthroughLogicalName } from "../config/resolve-model-set.js";
 import type { LogicalModelSelection } from "../config/types.js";
+import { getAllCacheStats } from "../driver/cache-stats.js";
 import { buildDriverSetFromModelSet } from "./driver-set.js";
-import { runAgenticWorkflow } from "./agentic.js";
+import { runAgenticWorkflow, type RunAgenticWorkflowOptions } from "./agentic.js";
 import {
   buildPassthroughRequest,
   streamPassthroughWorkflow,
 } from "./passthrough.js";
 import type { WorkflowRequest, WorkflowResult, WorkflowStreamHandle } from "./types.js";
+
+export type RunVirtualAgenticOptions = RunAgenticWorkflowOptions;
 
 function requireVirtualModelSet(
   selection: VirtualModelSelection,
@@ -59,10 +62,18 @@ export async function runVirtualAgenticWorkflow(
   config: ResolvedProviderConfig,
   selection: VirtualModelSelection,
   request: WorkflowRequest,
+  options?: RunVirtualAgenticOptions,
 ): Promise<WorkflowResult> {
   const modelSetName = requireVirtualModelSet(selection);
   const { driverSet } = await buildDriverSetFromModelSet(config, modelSetName);
-  return runAgenticWorkflow(driverSet, request);
+  const result = await runAgenticWorkflow(driverSet, request, options);
+
+  const allStats = getAllCacheStats(driverSet);
+  if (Object.keys(allStats).length > 0) {
+    await options?.logger?.logCacheStats?.(allStats);
+  }
+
+  return result;
 }
 
 export function resolveVirtualPassthroughLogicalName(

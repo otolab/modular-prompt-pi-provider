@@ -6,6 +6,7 @@ export type LogEntryType =
   | "llm_response"
   | "error"
   | "driver_info"
+  | "task_registration"
   | "cache_stats"
   | "eviction";
 

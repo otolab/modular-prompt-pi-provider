@@ -21,6 +21,7 @@ import { getCacheStats } from "../driver/cache-stats.js";
 import { getResolvedProviderConfig } from "../driver/service.js";
 import { setActiveStreamSessionId } from "../cache/session-context.js";
 import { beginRequestLog } from "../logging/runtime.js";
+import { createAgenticRequestLogger } from "../logging/agentic-logger.js";
 import { piContextToCompiledPrompt } from "./context-to-prompt.js";
 import { resolveStreamTermination } from "./finish-reason.js";
 import {
@@ -33,7 +34,6 @@ import { emitToolCallsFromResult } from "./toolcall-emitter.js";
 import { piToolsToToolDefinitions } from "./tools.js";
 import { mapQueryResultUsageToPi } from "./usage.js";
 import { pickMlxDriverDefaultOptions } from "../driver/mlx-options.js";
-import { resolveModelSetLogicalName } from "../config/resolve-model-set.js";
 import {
   buildPassthroughRequest,
   runLogicalPassthroughStream,
@@ -41,6 +41,7 @@ import {
   runVirtualPassthroughStream,
   resolveVirtualPassthroughLogicalName,
 } from "../workflow/index.js";
+import { resolveDriverSetRoleNames } from "../workflow/driver-set.js";
 import type { WorkflowResult } from "../workflow/types.js";
 
 type SelectionSource = "model.id" | "processes.default" | "virtualModel";
@@ -61,6 +62,7 @@ async function emitQueryResultToPi(params: {
   workPhase: string;
   requestLog: ReturnType<typeof beginRequestLog>;
   driverForCacheStats?: AIDriver;
+  skipResponseLogging?: boolean;
 }): Promise<void> {
   const {
     final,
@@ -71,11 +73,12 @@ async function emitQueryResultToPi(params: {
     workPhase,
     requestLog,
     driverForCacheStats,
+    skipResponseLogging,
   } = params;
 
   output.usage = mapQueryResultUsageToPi(final, model);
 
-  if (requestLog) {
+  if (requestLog && !skipResponseLogging) {
     await requestLog.logLlmResponse(workPhase, {
       content: final.content,
       finishReason: final.finishReason,
@@ -177,7 +180,6 @@ export async function bridgeDriverStreamToPi(
           options,
           output,
           piStream,
-          workPhase,
           requestLog,
           resolvedConfig,
           selection,
@@ -314,105 +316,122 @@ async function runVirtualAgenticPath(params: {
   options: SimpleStreamOptions | undefined;
   output: AssistantMessage;
   piStream: AssistantMessageEventStream;
-  workPhase: string;
   requestLog: ReturnType<typeof beginRequestLog>;
   resolvedConfig: ReturnType<typeof getResolvedProviderConfig>;
   selection: VirtualModelSelection;
   selectionSource: SelectionSource;
 }): Promise<void> {
+  const agenticPhase = "agentic";
   const {
     model,
     context,
     options,
     output,
     piStream,
-    workPhase,
     requestLog,
     resolvedConfig,
     selection,
     selectionSource,
   } = params;
 
-  const logicalName = resolveModelSetLogicalName(
-    resolvedConfig,
-    selection.workflow.modelSet!,
-    "default",
-  );
-  const modelSpec = findModelSpec(resolvedConfig, logicalName);
-  const hasCacheDir = modelHasCacheDir(resolvedConfig, logicalName);
-  setActiveStreamSessionId(options?.sessionId);
+  try {
+    const modelSetName = selection.workflow.modelSet!;
+    const { primaryLogicalName, roleLogicalNames } = resolveDriverSetRoleNames(
+      resolvedConfig,
+      modelSetName,
+    );
+    const modelSpec = findModelSpec(resolvedConfig, primaryLogicalName);
+    const hasCacheDir = modelHasCacheDir(resolvedConfig, primaryLogicalName);
+    setActiveStreamSessionId(options?.sessionId);
 
-  const defaultQueryOptions = pickMlxDriverDefaultOptions(
-    resolvedConfig.logicalModels.get(logicalName)!.defaultQueryOptions,
-  );
-  const piQueryOpts = piOptionsToQueryOptions(options, model, hasCacheDir);
-  const queryOpts = mergeQueryOptions(
-    {
-      stream: false,
-      ...defaultQueryOptions,
-    },
-    {
-      ...piQueryOpts,
-      ...(context.tools?.length
-        ? {
-            tools: piToolsToToolDefinitions(context.tools),
-            toolChoice: "auto" as const,
-          }
-        : {}),
-    },
-  );
+    const defaultQueryOptions = pickMlxDriverDefaultOptions(
+      resolvedConfig.logicalModels.get(primaryLogicalName)!.defaultQueryOptions,
+    );
+    const piQueryOpts = piOptionsToQueryOptions(options, model, hasCacheDir);
+    const queryOpts = mergeQueryOptions(
+      {
+        stream: false,
+        ...defaultQueryOptions,
+      },
+      {
+        ...piQueryOpts,
+        ...(context.tools?.length
+          ? {
+              tools: piToolsToToolDefinitions(context.tools),
+              toolChoice: "auto" as const,
+            }
+          : {}),
+      },
+    );
 
-  if (requestLog) {
-    await requestLog.logIn("request", {
-      model: model.id,
-      logicalModel: logicalName,
-      selectionSource,
-      workflowKey: selection.workflowKey,
-      workflowType: selection.workflow.type,
-      sessionId: options?.sessionId,
-      messageCount: context.messages.length,
-      hasTools: Boolean(context.tools?.length),
-      cache: queryOpts.cache,
+    if (requestLog) {
+      await requestLog.logIn("request", {
+        model: model.id,
+        logicalModel: primaryLogicalName,
+        selectionSource,
+        workflowKey: selection.workflowKey,
+        workflowType: selection.workflow.type,
+        sessionId: options?.sessionId,
+        messageCount: context.messages.length,
+        hasTools: Boolean(context.tools?.length),
+        cache: queryOpts.cache,
+      });
+      await requestLog.logDriverInfo(agenticPhase, {
+        model: primaryLogicalName,
+        models: roleLogicalNames,
+        physicalModel: modelSpec?.model,
+        provider: modelSpec?.provider,
+        capabilities: modelSpec?.capabilities,
+        cacheDir: modelSpec?.driverOptions?.cacheDir,
+        workflow: selection.workflowKey,
+      });
+    }
+
+    const prompt = piContextToCompiledPrompt(context);
+    const workflowRequest = buildPassthroughRequest(prompt, queryOpts);
+    const agenticLogger = requestLog
+      ? createAgenticRequestLogger(requestLog)
+      : undefined;
+
+    const workflowResult = await runVirtualAgenticWorkflow(
+      resolvedConfig,
+      selection,
+      workflowRequest,
+      {
+        logger: agenticLogger,
+        modelName: primaryLogicalName,
+      },
+    );
+
+    const text =
+      workflowResult.type === "response"
+        ? workflowResult.text
+        : workflowResult.text ?? "";
+    const textIndex = appendTextBlock(output, "");
+    piStream.push({ type: "text_start", contentIndex: textIndex, partial: output });
+
+    const final = workflowResultToQueryResult(workflowResult);
+    final.content = text;
+    await emitQueryResultToPi({
+      final,
+      output,
+      model,
+      piStream,
+      options,
+      workPhase: agenticPhase,
+      requestLog,
+      skipResponseLogging: true,
     });
-    await requestLog.logDriverInfo(workPhase, {
-      model: logicalName,
-      physicalModel: modelSpec?.model,
-      provider: modelSpec?.provider,
-      capabilities: modelSpec?.capabilities,
-      cacheDir: modelSpec?.driverOptions?.cacheDir,
-      workflow: selection.workflowKey,
-    });
+  } catch (error) {
+    output.stopReason = isAborted(options?.signal) ? "aborted" : "error";
+    output.errorMessage = error instanceof Error ? error.message : String(error);
+    if (requestLog) {
+      await requestLog.logError(agenticPhase, output.errorMessage, {
+        stopReason: output.stopReason,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    }
+    piStream.push({ type: "error", reason: output.stopReason, error: output });
+    piStream.end();
   }
-
-  const prompt = piContextToCompiledPrompt(context);
-  const workflowRequest = buildPassthroughRequest(prompt, queryOpts);
-
-  if (requestLog) {
-    await requestLog.logPrompt(workPhase, formatCompletionPrompt(prompt));
-  }
-
-  const workflowResult = await runVirtualAgenticWorkflow(
-    resolvedConfig,
-    selection,
-    workflowRequest,
-  );
-
-  const text =
-    workflowResult.type === "response"
-      ? workflowResult.text
-      : workflowResult.text ?? "";
-  const textIndex = appendTextBlock(output, "");
-  piStream.push({ type: "text_start", contentIndex: textIndex, partial: output });
-
-  const final = workflowResultToQueryResult(workflowResult);
-  final.content = text;
-  await emitQueryResultToPi({
-    final,
-    output,
-    model,
-    piStream,
-    options,
-    workPhase,
-    requestLog,
-  });
 }

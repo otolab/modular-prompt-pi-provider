@@ -42,14 +42,23 @@ interface LogEntry {
   timestamp: string;
   pid: number;
   seqId: string;
-  phase: string;       // in/out は request / response、その他は stream 等
+  phase: string;       // in/out は request / response、agentic は agentic workflow
   type: "in" | "out" | "prompt" | "llm_response" | "error" |
-        "driver_info" | "cache_stats" | "eviction";
+        "driver_info" | "task_registration" | "cache_stats" | "eviction";
   data: unknown;
 }
 ```
 
 典型的な 1 リクエスト: `in` → `driver_info` → `prompt` → `llm_response` → (`cache_stats`) → `out`
+
+agentic workflow（`virtualModel` + `type: agentic`）は phase=`agentic` で同様に記録する。追加で:
+
+| type | agentic 固有の内容 |
+|---|---|
+| `task_registration` | planning フェーズで登録されたタスク一覧 |
+| `llm_response` | `executionLog` / `taskTypeCounts` / `finishReason` を含む |
+| `driver_info` | `models` に DriverSet の role → 論理名マップ |
+| `cache_stats` | DriverSet 全体（role ごと、重複 driver は除外） |
 
 | type | 内容 |
 |---|---|

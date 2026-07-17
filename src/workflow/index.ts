@@ -16,6 +16,6 @@ export {
   resolveVirtualPassthroughLogicalName,
   toLogicalSelection,
 } from "./run-virtual.js";
-export { buildDriverSetFromModelSet } from "./driver-set.js";
+export { buildDriverSetFromModelSet, resolveDriverSetRoleNames } from "./driver-set.js";
 export { runAgenticWorkflow } from "./agentic.js";
 export { piAgenticModule } from "./pi-prompt-module.js";

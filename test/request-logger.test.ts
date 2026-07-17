@@ -54,4 +54,55 @@ describe("RequestLogger", () => {
       finishReason: "stop",
     });
   });
+
+  it("task_registration を書く", async () => {
+    logDir = await mkdtemp(join(tmpdir(), "mpp-log-test-"));
+    const logger = new RequestLogger(12345, "0001", "full", logDir);
+    await logger.logTaskRegistration("agentic", [
+      {
+        name: "analyze",
+        taskType: "think",
+        instruction: "read request",
+      },
+    ]);
+
+    const entry = parseLogFile(logger.filePath)[0];
+    expect(entry?.type).toBe("task_registration");
+    expect(entry?.phase).toBe("agentic");
+    expect(entry?.data).toEqual({
+      taskCount: 1,
+      tasks: [
+        {
+          name: "analyze",
+          taskType: "think",
+          instruction: "read request",
+        },
+      ],
+    });
+  });
+
+  it("minimal の agentic llm_response は executionLog を要約する", async () => {
+    logDir = await mkdtemp(join(tmpdir(), "mpp-log-test-"));
+    const logger = new RequestLogger(12345, "0001", "minimal", logDir);
+    await logger.logLlmResponse(
+      "agentic",
+      {
+        output: "final answer",
+        finishReason: "stop",
+        executionLog: [{ taskType: "think" }, { taskType: "output" }],
+        taskTypeCounts: { think: 1, output: 1 },
+      },
+      "chat",
+    );
+
+    const entry = parseLogFile(logger.filePath)[0];
+    expect(entry?.data).toMatchObject({
+      hasContent: true,
+      contentLength: 12,
+      finishReason: "stop",
+      taskCount: 2,
+      taskTypeCounts: { think: 1, output: 1 },
+      model: "chat",
+    });
+  });
 });

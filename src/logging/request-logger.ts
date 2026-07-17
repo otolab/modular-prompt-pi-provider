@@ -69,23 +69,53 @@ export class RequestLogger {
     await this.append("prompt", phase, { content, ...metadata });
   }
 
-  async logLlmResponse(phase: string, data: unknown): Promise<void> {
+  async logLlmResponse(phase: string, data: unknown, model?: string): Promise<void> {
     if (this.level === "none") return;
 
     let payload = data;
     if (this.level === "minimal" && data && typeof data === "object") {
       const record = data as Record<string, unknown>;
-      const content = typeof record.content === "string" ? record.content : "";
+      const content =
+        typeof record.content === "string"
+          ? record.content
+          : typeof record.output === "string"
+            ? record.output
+            : "";
+      const executionLog = Array.isArray(record.executionLog)
+        ? record.executionLog
+        : undefined;
       payload = {
         hasContent: content.length > 0,
         contentLength: content.length,
         finishReason: record.finishReason,
         usage: record.usage,
         toolCallCount: Array.isArray(record.toolCalls) ? record.toolCalls.length : 0,
+        taskCount: executionLog?.length,
+        taskTypeCounts: record.taskTypeCounts,
+        model,
       };
+    } else if (model && data && typeof data === "object") {
+      payload = { ...(data as Record<string, unknown>), model };
     }
 
     await this.append("llm_response", phase, payload);
+  }
+
+  async logTaskRegistration(
+    phase: string,
+    tasks: Array<{
+      name: string;
+      taskType: string;
+      instruction: string;
+      reason?: string;
+      driverRole?: string;
+    }>,
+  ): Promise<void> {
+    if (this.level === "none") return;
+    await this.append("task_registration", phase, {
+      taskCount: tasks.length,
+      tasks,
+    });
   }
 
   async logError(phase: string, message: string, data?: unknown): Promise<void> {

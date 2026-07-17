@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AIDriver } from "@modular-prompt/driver";
-import { getCacheStats } from "../src/driver/cache-stats.js";
+import { getCacheStats, getAllCacheStats } from "../src/driver/cache-stats.js";
 
 describe("getCacheStats", () => {
   it("cacheController が無い driver は undefined", () => {
@@ -33,5 +33,29 @@ describe("getCacheStats", () => {
     } as unknown as AIDriver;
 
     expect(getCacheStats(driver)).toBeUndefined();
+  });
+});
+
+describe("getAllCacheStats", () => {
+  it("DriverSet から role ごとの統計を返す", () => {
+    const stats = {
+      totalQueries: 1,
+      incremental: 0,
+      fresh: 1,
+      totalPromptTokens: 10,
+      prefillReusedTokens: 0,
+      cacheGrowthTokens: 10,
+    };
+    const sharedDriver = {
+      cacheController: { getStats: () => stats },
+    } as unknown as AIDriver;
+    const driverSet = {
+      default: sharedDriver,
+      chat: sharedDriver,
+    };
+
+    expect(getAllCacheStats(driverSet)).toEqual({
+      default: stats,
+    });
   });
 });

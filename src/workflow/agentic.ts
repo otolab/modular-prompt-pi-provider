@@ -1,7 +1,15 @@
-import type { ToolCall, ToolDefinition } from "@modular-prompt/driver";
+import type { ToolDefinition } from "@modular-prompt/driver";
+import { formatCompletionPrompt } from "@modular-prompt/driver";
 import { agenticProcess, type DriverSet } from "@modular-prompt/process";
 import type { WorkflowRequest, WorkflowResult } from "./types.js";
 import { piAgenticModule } from "./pi-prompt-module.js";
+import {
+  buildExecutionLogForLog,
+  countTaskTypes,
+  extractPendingToolCalls,
+  extractRegisteredTasks,
+  type AgenticWorkflowLogger,
+} from "./agentic-logging.js";
 
 function parseToolArguments(
   args: string | Record<string, unknown>,
@@ -12,30 +20,66 @@ function parseToolArguments(
   return args;
 }
 
-function extractPendingToolCalls(
-  executionLog: Array<{ pendingToolCalls?: ToolCall[] }> | undefined,
-): ToolCall[] {
-  return executionLog?.flatMap((entry) => entry.pendingToolCalls ?? []) ?? [];
+export interface RunAgenticWorkflowOptions {
+  logger?: AgenticWorkflowLogger;
+  modelName?: string;
 }
 
 /** agentic workflow — agenticProcess を Pi 向け WorkflowResult に変換 */
 export async function runAgenticWorkflow(
   driverSet: DriverSet,
   request: WorkflowRequest,
+  options?: RunAgenticWorkflowOptions,
 ): Promise<WorkflowResult> {
-  const result = await agenticProcess(
-    driverSet,
-    piAgenticModule,
-    { compiled: request.compiled },
-    {
-      tools: request.queryOptions.tools,
-      enablePlanning: true,
-      includeThinking: false,
-    },
-  );
+  const logger = options?.logger;
+  const toolCount = request.queryOptions.tools?.length ?? 0;
+
+  await logger?.logPrompt(formatCompletionPrompt(request.compiled), {
+    toolCount,
+  });
+
+  let result;
+  try {
+    result = await agenticProcess(
+      driverSet,
+      piAgenticModule,
+      { compiled: request.compiled },
+      {
+        tools: request.queryOptions.tools,
+        enablePlanning: true,
+        includeThinking: false,
+      },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await logger?.logError(message, {
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
 
   const executionLog = result.context.executionLog;
   const pendingToolCalls = extractPendingToolCalls(executionLog);
+  const registeredTasks = extractRegisteredTasks(executionLog);
+
+  if (registeredTasks.length > 0) {
+    await logger?.logTaskRegistration?.(registeredTasks);
+  }
+
+  const executionLogForLog = buildExecutionLogForLog(executionLog);
+  const taskTypeCounts = countTaskTypes(executionLog);
+  const finishReason = pendingToolCalls.length > 0 ? "tool_calls" : "stop";
+  const { context: _context, ...logData } = result;
+
+  await logger?.logLlmResponse(
+    {
+      ...logData,
+      finishReason,
+      executionLog: executionLogForLog,
+      taskTypeCounts,
+    },
+    options?.modelName,
+  );
 
   if (pendingToolCalls.length > 0) {
     return {
