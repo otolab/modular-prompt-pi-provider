@@ -65,21 +65,25 @@ export interface PiProviderYamlConfig {
     mlx?: {
       baseURL?: string;
       pythonPath?: string;
+      cacheDir?: string;
     };
   };
   providers?: {
     mlx?: {
       baseURL?: string;
       pythonPath?: string;
+      cacheDir?: string;
     };
     mlx_lm?: {
       baseURL?: string;
       pythonPath?: string;
+      cacheDir?: string;
     };
     [key: string]:
       | {
           baseURL?: string;
           pythonPath?: string;
+          cacheDir?: string;
         }
       | undefined;
   };
@@ -151,6 +155,7 @@ function expandProviderPaths(
         ? { pythonPath: expandPath(provider.pythonPath, homeDir) }
         : {}),
       ...(provider.baseURL ? { baseURL: expandPath(provider.baseURL, homeDir) } : {}),
+      ...(provider.cacheDir ? { cacheDir: expandPath(provider.cacheDir, homeDir) } : {}),
     };
   }
   return expanded;
@@ -162,14 +167,7 @@ function expandModelEntryPaths(
 ): PiProviderYamlModelEntry {
   return {
     ...entry,
-    driverOptions: entry.driverOptions
-      ? {
-          ...entry.driverOptions,
-          ...(entry.driverOptions.cacheDir
-            ? { cacheDir: expandPath(entry.driverOptions.cacheDir, homeDir) }
-            : {}),
-        }
-      : undefined,
+    driverOptions: entry.driverOptions ? { ...entry.driverOptions } : undefined,
   };
 }
 
@@ -184,14 +182,7 @@ function expandModelsMapPaths(
   for (const [logicalName, definition] of Object.entries(models)) {
     expanded[logicalName] = {
       ...definition,
-      driverOptions: definition.driverOptions
-        ? {
-            ...definition.driverOptions,
-            ...(definition.driverOptions.cacheDir
-              ? { cacheDir: expandPath(definition.driverOptions.cacheDir, homeDir) }
-              : {}),
-          }
-        : undefined,
+      driverOptions: definition.driverOptions ? { ...definition.driverOptions } : undefined,
     };
   }
 
@@ -224,6 +215,9 @@ function expandPathFields(
                 ...(config.drivers.mlx.baseURL
                   ? { baseURL: expandPath(config.drivers.mlx.baseURL, homeDir) }
                   : {}),
+                ...(config.drivers.mlx.cacheDir
+                  ? { cacheDir: expandPath(config.drivers.mlx.cacheDir, homeDir) }
+                  : {}),
               }
             : undefined,
         }
@@ -239,6 +233,56 @@ function expandPathFields(
   };
 
   return expanded;
+}
+
+
+function mergeModels(
+  base?: PiProviderYamlConfig["models"],
+  override?: PiProviderYamlConfig["models"],
+): PiProviderYamlConfig["models"] | undefined {
+  if (!override) {
+    return base;
+  }
+  if (!base) {
+    return override;
+  }
+
+  if (Array.isArray(override)) {
+    return override;
+  }
+  if (Array.isArray(base)) {
+    return override;
+  }
+
+  const merged: NonNullable<
+    Exclude<PiProviderYamlConfig["models"], PiProviderYamlModelEntry[]>
+  > = { ...base };
+
+  for (const [logicalName, definition] of Object.entries(override)) {
+    const baseDefinition = base[logicalName];
+    merged[logicalName] = {
+      ...baseDefinition,
+      ...definition,
+      ...(baseDefinition?.defaultQueryOptions || definition.defaultQueryOptions
+        ? {
+            defaultQueryOptions: {
+              ...baseDefinition?.defaultQueryOptions,
+              ...definition.defaultQueryOptions,
+            },
+          }
+        : {}),
+      ...(baseDefinition?.driverOptions || definition.driverOptions
+        ? {
+            driverOptions: {
+              ...baseDefinition?.driverOptions,
+              ...definition.driverOptions,
+            },
+          }
+        : {}),
+    };
+  }
+
+  return merged;
 }
 
 function mergeYamlConfig(
@@ -262,7 +306,7 @@ function mergeYamlConfig(
   return {
     ...base,
     ...override,
-    models: override.models ?? base.models,
+    models: mergeModels(base.models, override.models),
     providers: Object.keys(mergedProviders).length > 0 ? mergedProviders : undefined,
     drivers: {
       ...base.drivers,
@@ -382,8 +426,8 @@ export function loadPiProviderConfig(
   }
 
   const scope = { cwd, isProjectTrusted, usedProjectConfig };
-  const withDefaultCacheDirs = applyDefaultCacheDirs(merged, scope);
-  const withLogging = applyLoggingDefaults(withDefaultCacheDirs, scope);
+  const withDefaultProviderCacheDirs = applyDefaultProviderCacheDirs(merged, scope);
+  const withLogging = applyLoggingDefaults(withDefaultProviderCacheDirs, scope);
 
   return expandPathFields(withLogging, homedir());
 }
@@ -438,45 +482,42 @@ function applyLoggingDefaults(
   };
 }
 
-function applyDefaultCacheDirs(
+function applyDefaultProviderCacheDirs(
   config: PiProviderYamlConfig,
   scope: { cwd: string; isProjectTrusted: boolean; usedProjectConfig: boolean },
 ): PiProviderYamlConfig {
-  if (!config.models) {
-    return config;
-  }
-
   const defaultCacheDir = resolveDefaultCacheDir(scope);
+  const providers: NonNullable<PiProviderYamlConfig["providers"]> = {
+    ...config.providers,
+  };
 
-  if (Array.isArray(config.models)) {
-    return {
-      ...config,
-      models: config.models.map((entry) => ({
-        ...entry,
-        driverOptions: {
-          ...entry.driverOptions,
-          cacheDir: entry.driverOptions?.cacheDir ?? defaultCacheDir,
-        },
-      })),
+  if (config.drivers?.mlx) {
+    providers.mlx = {
+      ...providers.mlx,
+      ...config.drivers.mlx,
+      cacheDir:
+        config.drivers.mlx.cacheDir ??
+        providers.mlx?.cacheDir ??
+        defaultCacheDir,
     };
   }
 
-  const modelsWithCache: NonNullable<
-    Exclude<PiProviderYamlConfig["models"], PiProviderYamlModelEntry[]>
-  > = {};
-
-  for (const [logicalName, definition] of Object.entries(config.models)) {
-    modelsWithCache[logicalName] = {
-      ...definition,
-      driverOptions: {
-        ...definition.driverOptions,
-        cacheDir: definition.driverOptions?.cacheDir ?? defaultCacheDir,
-      },
+  for (const [name, provider] of Object.entries(providers)) {
+    if (!provider) {
+      continue;
+    }
+    providers[name] = {
+      ...provider,
+      cacheDir: provider.cacheDir ?? defaultCacheDir,
     };
+  }
+
+  if (Object.keys(providers).length === 0) {
+    providers.mlx = { cacheDir: defaultCacheDir };
   }
 
   return {
     ...config,
-    models: modelsWithCache,
+    providers,
   };
 }

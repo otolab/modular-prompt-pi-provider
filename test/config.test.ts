@@ -130,12 +130,14 @@ describe("config", () => {
     expect(modelHasCacheDir(withoutCache, "default")).toBe(false);
 
     const withCache = createResolvedProviderConfig({
+      providers: {
+        mlx: { cacheDir: "/tmp/cache" },
+      },
       models: {
         cached: {
           provider: "mlx",
           model: "mlx-community/cached",
           defaultQueryOptions: { maxTokens: 8192 },
-          driverOptions: { cacheDir: "/tmp/cache" },
         },
       },
     });
@@ -245,14 +247,58 @@ providers:
 
     const models = config.models as Record<
       string,
-      { model: string; defaultQueryOptions?: { maxTokens?: number }; driverOptions?: { cacheDir?: string } }
+      { model: string; defaultQueryOptions?: { maxTokens?: number } }
     >;
     expect(models.gemma?.model).toBe("project/model");
     expect(models.gemma?.defaultQueryOptions?.maxTokens).toBe(2000);
     expect(config.providers?.mlx?.pythonPath).toContain("project/python");
-    expect(models.gemma?.driverOptions?.cacheDir).toBe(
+    expect(config.providers?.mlx?.cacheDir).toBe(
       join("/project", CONFIG_DIR_NAME, PLUGIN_DIR_NAME, "cache"),
     );
+  });
+
+
+  it("models マップは論理名ごとに shallow merge する", () => {
+    const globalPath = globalConfigPath();
+    const projectPath = projectConfigPath("/project");
+    const files: Record<string, string> = {
+      [globalPath]: `
+models:
+  gemma:
+    provider: mlx
+    model: global/model
+    defaultQueryOptions:
+      maxTokens: 1000
+      temperature: 0.1
+  other:
+    provider: mlx
+    model: global/other
+    defaultQueryOptions:
+      maxTokens: 500
+`,
+      [projectPath]: `
+models:
+  gemma:
+    defaultQueryOptions:
+      maxTokens: 2000
+`,
+    };
+
+    const config = loadPiProviderConfig({
+      cwd: "/project",
+      isProjectTrusted: true,
+      fileExists: (path) => path in files,
+      readFile: (path) => files[path]!,
+    });
+
+    const models = config.models as Record<
+      string,
+      { model: string; defaultQueryOptions?: { maxTokens?: number; temperature?: number } }
+    >;
+    expect(models.gemma?.model).toBe("global/model");
+    expect(models.gemma?.defaultQueryOptions?.maxTokens).toBe(2000);
+    expect(models.gemma?.defaultQueryOptions?.temperature).toBe(0.1);
+    expect(models.other?.model).toBe("global/other");
   });
 
   it("resolveDefaultCacheDir はスコープに応じたパスを返す", () => {

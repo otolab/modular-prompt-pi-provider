@@ -79,10 +79,34 @@ function requireDefaultQueryOptions(
   return options;
 }
 
+function resolveProviderCacheDir(
+  providerName: string,
+  providers: ProvidersConfig,
+): string | undefined {
+  const connection =
+    providers[providerName] ??
+    (providerName === "mlx" || providerName === "mlx_lm"
+      ? (providers.mlx ?? providers.mlx_lm)
+      : undefined);
+  const cacheDir = connection?.cacheDir;
+  return typeof cacheDir === "string" && cacheDir.length > 0 ? cacheDir : undefined;
+}
+
+function buildDriverOptions(
+  definition: LogicalModelDefinition,
+  providers: ProvidersConfig,
+): ModelSpec["driverOptions"] | undefined {
+  const providerCacheDir = resolveProviderCacheDir(definition.provider, providers);
+  const { cacheDir: _ignored, ...rest } = definition.driverOptions ?? {};
+  const merged = providerCacheDir ? { ...rest, cacheDir: providerCacheDir } : rest;
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
 /** 論理モデル定義 → ModelSpec（Pi catalog / driver 作成用） */
 export function logicalModelToSpec(
   logicalName: string,
   definition: LogicalModelDefinition,
+  providers: ProvidersConfig = {},
 ): ResolvedLogicalModel {
   const provider = normalizeDriverProvider(definition.provider);
   const defaultQueryOptions = requireDefaultQueryOptions(
@@ -92,6 +116,7 @@ export function logicalModelToSpec(
   const defaultOptions = pickMlxDriverDefaultOptions(defaultQueryOptions);
   const maxOutputTokens =
     definition.maxOutputTokens ?? defaultQueryOptions.maxTokens ?? 8_192;
+  const driverOptions = buildDriverOptions(definition, providers);
 
   const spec: ModelSpec = {
     model: definition.model,
@@ -101,7 +126,7 @@ export function logicalModelToSpec(
     maxOutputTokens,
     priority: definition.priority ?? 10,
     ...(defaultOptions ? { defaultOptions } : {}),
-    ...(definition.driverOptions ? { driverOptions: definition.driverOptions } : {}),
+    ...(driverOptions ? { driverOptions } : {}),
   };
 
   return {
@@ -150,15 +175,20 @@ function isLegacyModelsArray(
 export function resolveLogicalModels(
   yaml: PiProviderYamlConfig,
 ): Map<string, ResolvedLogicalModel> {
+  const providers = normalizeProviders(yaml);
   const result = new Map<string, ResolvedLogicalModel>();
 
   if (!yaml.models) {
     const physicalModel = resolveDefaultPhysicalModel();
-    const resolved = logicalModelToSpec(DEFAULT_LOGICAL_MODEL, {
-      provider: "mlx",
-      model: physicalModel,
-      defaultQueryOptions: { maxTokens: 8_192 },
-    });
+    const resolved = logicalModelToSpec(
+      DEFAULT_LOGICAL_MODEL,
+      {
+        provider: "mlx",
+        model: physicalModel,
+        defaultQueryOptions: { maxTokens: 8_192 },
+      },
+      providers,
+    );
     result.set(DEFAULT_LOGICAL_MODEL, resolved);
     return result;
   }
@@ -166,14 +196,14 @@ export function resolveLogicalModels(
   if (isLegacyModelsArray(yaml.models)) {
     for (const entry of yaml.models) {
       const { logicalName, definition } = legacyEntryToDefinition(entry);
-      result.set(logicalName, logicalModelToSpec(logicalName, definition));
+      result.set(logicalName, logicalModelToSpec(logicalName, definition, providers));
     }
     return result;
   }
 
   for (const [logicalName, rawDefinition] of Object.entries(yaml.models)) {
     const definition = rawDefinition as LogicalModelDefinition;
-    result.set(logicalName, logicalModelToSpec(logicalName, definition));
+    result.set(logicalName, logicalModelToSpec(logicalName, definition, providers));
   }
 
   return result;

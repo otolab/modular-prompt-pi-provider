@@ -74,6 +74,43 @@ describe("normalizeProviderConfig", () => {
     ]);
   });
 
+  it("providers.cacheDir を model の driverOptions に注入する", () => {
+    const resolved = normalizeProviderConfig({
+      providers: {
+        mlx: { cacheDir: "/tmp/provider-cache" },
+      },
+      models: {
+        gemma: {
+          provider: "mlx",
+          model: "mlx-community/gemma",
+          defaultQueryOptions: { maxTokens: 8192 },
+        },
+      },
+    });
+    expect(resolved.logicalModels.get("gemma")?.spec.driverOptions?.cacheDir).toBe(
+      "/tmp/provider-cache",
+    );
+  });
+
+  it("model 個別の driverOptions.cacheDir は無視する", () => {
+    const resolved = normalizeProviderConfig({
+      providers: {
+        mlx: { cacheDir: "/tmp/provider-cache" },
+      },
+      models: {
+        gemma: {
+          provider: "mlx",
+          model: "mlx-community/gemma",
+          defaultQueryOptions: { maxTokens: 8192 },
+          driverOptions: { cacheDir: "/tmp/model-cache" },
+        },
+      },
+    });
+    expect(resolved.logicalModels.get("gemma")?.spec.driverOptions?.cacheDir).toBe(
+      "/tmp/provider-cache",
+    );
+  });
+
   it("virtualModel を workflow から抽出する", () => {
     const resolved = normalizeProviderConfig({
       models: {

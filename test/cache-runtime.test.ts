@@ -18,26 +18,27 @@ describe("cache runtime", () => {
 
   it("initCacheRuntime で policy と cacheDirs を設定する", () => {
     const appConfig = createApplicationConfig({
-      models: [
-        {
+      providers: {
+        mlx: { cacheDir: "/tmp/cache-a" },
+        mlx_lm: { cacheDir: "/tmp/cache-b" },
+      },
+      models: {
+        m1: {
+          provider: "mlx",
           model: "m1",
-          provider: "mlx",
           defaultQueryOptions: { maxTokens: 8192 },
-          driverOptions: { cacheDir: "/tmp/cache-a" },
         },
-        {
+        m2: {
+          provider: "mlx",
           model: "m2",
-          provider: "mlx",
           defaultQueryOptions: { maxTokens: 8192 },
-          driverOptions: { cacheDir: "/tmp/cache-a" },
         },
-        {
+        m3: {
+          provider: "mlx_lm",
           model: "m3",
-          provider: "mlx",
           defaultQueryOptions: { maxTokens: 8192 },
-          driverOptions: { cacheDir: "/tmp/cache-b" },
         },
-      ],
+      },
     });
 
     initCacheRuntime(
@@ -54,14 +55,16 @@ describe("cache runtime", () => {
 
   it("sweepBeforeWrite 無効時は clean を呼ばない", async () => {
     const appConfig = createApplicationConfig({
-      models: [
-        {
-          model: "m1",
+      providers: {
+        mlx: { cacheDir: "/tmp/cache-x" },
+      },
+      models: {
+        m1: {
           provider: "mlx",
+          model: "m1",
           defaultQueryOptions: { maxTokens: 8192 },
-          driverOptions: { cacheDir: "/tmp/cache-x" },
         },
-      ],
+      },
     });
     initCacheRuntime({ cache: { sweepBeforeWrite: false } }, appConfig);
 
@@ -81,20 +84,22 @@ describe("cache runtime", () => {
 
   it("sweepAllCaches は登録済み cacheDir ごとに clean する", async () => {
     const appConfig = createApplicationConfig({
-      models: [
-        {
+      providers: {
+        mlx: { cacheDir: "/tmp/c1" },
+        mlx_lm: { cacheDir: "/tmp/c2" },
+      },
+      models: {
+        m1: {
+          provider: "mlx",
           model: "m1",
-          provider: "mlx",
           defaultQueryOptions: { maxTokens: 8192 },
-          driverOptions: { cacheDir: "/tmp/c1" },
         },
-        {
+        m2: {
+          provider: "mlx_lm",
           model: "m2",
-          provider: "mlx",
           defaultQueryOptions: { maxTokens: 8192 },
-          driverOptions: { cacheDir: "/tmp/c2" },
         },
-      ],
+      },
     });
     initCacheRuntime(undefined, appConfig);
 

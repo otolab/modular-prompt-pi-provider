@@ -101,13 +101,12 @@ const pluginDataDir = join(getAgentDir(), "modular-prompt-provider");
 providers:
   mlx:
     pythonPath: ~/.local/share/mise/shims/python3
+    cacheDir: ~/.pi/agent/modular-prompt-provider/cache
 
 models:
   default:
     provider: mlx
     model: mlx-community/gemma-4-26B-A4B-it-heretic-4bit
-    driverOptions:
-      cacheDir: ~/.pi/agent/modular-prompt-provider/cache
     defaultQueryOptions:
       maxTokens: 8192
 
@@ -131,7 +130,7 @@ logging:
 
 レガシー `models[]` 配列形式も引き続きサポート（論理名 = `id ?? model`、`defaultOptions` = `defaultQueryOptions` エイリアス）。
 
-`~` はロード時に展開する。`cacheDir` / `logging.dir` 未指定時は上記デフォルトをプラグインデータ dir から組み立てる。
+`~` はロード時に展開する。`providers.*.cacheDir` / `logging.dir` 未指定時は上記デフォルトをプラグインデータ dir から組み立てる。KV キャッシュはプロバイダ単位で共有する（model 個別の `driverOptions.cacheDir` は非推奨）。
 
 ### モデル discovery（#25）
 

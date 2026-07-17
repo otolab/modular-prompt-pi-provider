@@ -86,8 +86,8 @@ export function findModelSpec(
     return config.logicalModels.get(logicalName)?.spec;
   }
 
-  const resolved = normalizeProviderConfigFromApplication(config, logicalName);
-  return resolved;
+  // FIXME(#40): ApplicationConfig には論理名マップがない。呼び出しは ResolvedProviderConfig に統一する。
+  return normalizeProviderConfigFromApplication(config, logicalName);
 }
 
 function normalizeProviderConfigFromApplication(

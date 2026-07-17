@@ -10,6 +10,8 @@ import type { PiProviderYamlModelEntry } from "../pi-provider-config.js";
 export interface ProviderConnectionConfig {
   baseURL?: string;
   pythonPath?: string;
+  /** MLX KV キャッシュ保存先（プロバイダ単位。全モデルで共有） */
+  cacheDir?: string;
 }
 
 /** YAML `providers` セクション */

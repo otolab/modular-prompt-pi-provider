@@ -40,12 +40,14 @@ const model = {
 
 function mockResolvedConfig() {
   return createResolvedProviderConfig({
+    providers: {
+      mlx: { cacheDir: "/tmp/modular-prompt-cache" },
+    },
     models: {
       "test-model": {
         provider: "mlx",
         model: "mlx-community/test-model",
         defaultQueryOptions: { maxTokens: 8192 },
-        driverOptions: { cacheDir: "/tmp/modular-prompt-cache" },
       },
     },
   });
