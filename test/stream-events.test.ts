@@ -217,7 +217,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     expect(capturedOptions?.cache).toBe(false);
   });
 
-  it("virtualModel 選択時は Phase 3 未実装エラー", async () => {
+  it("virtualModel passthrough は modelSet 経由でストリームする", async () => {
     vi.mocked(getResolvedProviderConfig).mockReturnValue(
       createResolvedProviderConfig({
         models: {
@@ -227,22 +227,30 @@ describe("streamModularPromptMlx (TestDriver)", () => {
             defaultQueryOptions: { maxTokens: 8192 },
           },
         },
+        modelSets: {
+          default: { chat: "gemma", default: "gemma" },
+        },
         workflow: {
-          agentic: {
-            type: "agentic",
-            virtualModel: "agentic-chat",
+          chat: {
+            type: "passthrough",
+            modelSet: "default",
+            virtualModel: "virtual-chat",
           },
         },
       }),
     );
+    vi.mocked(getDriverForLogicalModel).mockResolvedValue(
+      new TestDriver({ responses: ["virtual-ok"] }),
+    );
 
-    const virtualModel = { ...model, id: "agentic-chat" };
+    const virtualModel = { ...model, id: "virtual-chat" };
     const { events, message } = await collectStream(
       streamModularPromptMlx(virtualModel, baseContext()),
     );
 
-    expect(events.at(-1)?.type).toBe("error");
-    expect(message.errorMessage).toContain("workflow execution not implemented (Phase 3)");
+    expect(getDriverForLogicalModel).toHaveBeenCalledWith("gemma");
+    expect(events.at(-1)?.type).toBe("done");
+    expect(message.stopReason).toBe("stop");
   });
 
   it("未登録 model.id は processes.default にフォールバックしてストリームする", async () => {
