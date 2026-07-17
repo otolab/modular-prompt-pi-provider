@@ -1,65 +1,18 @@
-import type {
-  ApplicationConfig,
-  DriverCapability,
-  DriverProvider,
-  ModelSpec,
-} from "@modular-prompt/driver";
-import type { PiProviderYamlConfig, PiProviderYamlModelEntry } from "./pi-provider-config.js";
-import { pickMlxDriverDefaultOptions } from "./driver/mlx-options.js";
+import type { ApplicationConfig, ModelSpec } from "@modular-prompt/driver";
+import type { PiProviderYamlConfig } from "./pi-provider-config.js";
+import { DEFAULT_MODEL_FALLBACK } from "./constants.js";
+import { normalizeProviderConfig } from "./config/normalize-config.js";
+import type { ResolvedLogicalModel, ResolvedProviderConfig } from "./config/types.js";
 
-/** コードデフォルト（優先度最低） */
-export const DEFAULT_MODEL_FALLBACK =
-  "mlx-community/gemma-4-26B-A4B-it-heretic-4bit";
-
-const DEFAULT_CAPABILITIES: DriverCapability[] = [
-  "streaming",
-  "local",
-  "multilingual",
-  "japanese",
-  "chat",
-  "tools",
-  "reasoning",
-  "function-calling",
-];
-
-/** @deprecated {@link resolveDefaultModelId} を使用 */
-export const DEFAULT_MLX_MODEL = resolveDefaultModelId();
+/** @deprecated {@link DEFAULT_MODEL_FALLBACK} を使用 */
+export { DEFAULT_MODEL_FALLBACK } from "./constants.js";
 
 function resolveDefaultModelId(): string {
   return process.env.MODULAR_PROMPT_PI_MODEL ?? DEFAULT_MODEL_FALLBACK;
 }
 
-function yamlModelToSpec(entry: PiProviderYamlModelEntry): ModelSpec {
-  const defaultOptions = pickMlxDriverDefaultOptions(entry.defaultOptions);
-  const maxOutputTokens =
-    entry.maxOutputTokens ?? entry.defaultOptions?.maxTokens ?? 8_192;
-
-  return {
-    model: entry.model,
-    provider: (entry.provider ?? "mlx") as DriverProvider,
-    capabilities: (entry.capabilities ?? DEFAULT_CAPABILITIES) as DriverCapability[],
-    ...(entry.maxInputTokens != null ? { maxInputTokens: entry.maxInputTokens } : {}),
-    maxOutputTokens,
-    priority: entry.priority ?? 10,
-    ...(defaultOptions ? { defaultOptions } : {}),
-    ...(entry.driverOptions ? { driverOptions: entry.driverOptions } : {}),
-  };
-}
-
-function buildDefaultModelSpec(model: string): ModelSpec {
-  const defaultOptions = pickMlxDriverDefaultOptions({
-    maxTokens: 8_192,
-  });
-
-  return {
-    model,
-    provider: "mlx",
-    capabilities: DEFAULT_CAPABILITIES,
-    maxOutputTokens: 8_192,
-    priority: 10,
-    ...(defaultOptions ? { defaultOptions } : {}),
-  };
-}
+/** @deprecated {@link resolveDefaultModelId} を使用 */
+export const DEFAULT_MLX_MODEL = resolveDefaultModelId();
 
 /**
  * YAML + 環境変数 + コードデフォルトから ApplicationConfig を組み立てる。
@@ -69,26 +22,101 @@ export function createApplicationConfig(
   yamlConfig?: PiProviderYamlConfig,
   overrides?: Partial<ApplicationConfig>,
 ): ApplicationConfig {
-  const models =
-    yamlConfig?.models?.length
-      ? yamlConfig.models.map(yamlModelToSpec)
-      : [buildDefaultModelSpec(resolveDefaultModelId())];
-
+  const resolved = normalizeProviderConfig(yamlConfig);
   return {
-    ...(yamlConfig?.drivers ? { drivers: yamlConfig.drivers } : {}),
-    models,
+    ...resolved.applicationConfig,
     ...overrides,
+    models: overrides?.models ?? resolved.applicationConfig.models,
+    drivers: overrides?.drivers ?? resolved.applicationConfig.drivers,
   };
 }
 
-export function findModelSpec(
-  config: ApplicationConfig,
-  modelId: string,
-): ModelSpec | undefined {
-  return config.models?.find((spec) => spec.model === modelId);
+export function createResolvedProviderConfig(
+  yamlConfig?: PiProviderYamlConfig,
+  overrides?: Partial<ApplicationConfig>,
+): ResolvedProviderConfig {
+  const resolved = normalizeProviderConfig(yamlConfig);
+  if (!overrides?.models) {
+    return {
+      ...resolved,
+      applicationConfig: {
+        ...resolved.applicationConfig,
+        ...overrides,
+      },
+    };
+  }
+
+  return mergeDiscoveredModels(resolved, overrides.models, overrides);
 }
 
-export function modelHasCacheDir(config: ApplicationConfig, modelId: string): boolean {
-  const cacheDir = findModelSpec(config, modelId)?.driverOptions?.cacheDir;
+/** discovery 後の ModelSpec を論理モデル Map に反映する */
+export function mergeDiscoveredModels(
+  resolved: ResolvedProviderConfig,
+  discoveredModels: ModelSpec[],
+  overrides?: Partial<ApplicationConfig>,
+): ResolvedProviderConfig {
+  const byPhysical = new Map(discoveredModels.map((spec) => [spec.model, spec]));
+  const updatedLogical = new Map<string, ResolvedLogicalModel>();
+
+  for (const [logicalName, logicalModel] of resolved.logicalModels) {
+    const discovered = byPhysical.get(logicalModel.physicalModel);
+    updatedLogical.set(logicalName, {
+      ...logicalModel,
+      spec: discovered ?? logicalModel.spec,
+    });
+  }
+
+  return {
+    ...resolved,
+    logicalModels: updatedLogical,
+    applicationConfig: {
+      ...resolved.applicationConfig,
+      ...overrides,
+      models: discoveredModels,
+    },
+  };
+}
+
+/** 論理名で ModelSpec を取得する（Pi model.id = 論理名） */
+export function findModelSpec(
+  config: ApplicationConfig | ResolvedProviderConfig,
+  logicalName: string,
+): ModelSpec | undefined {
+  if ("logicalModels" in config) {
+    return config.logicalModels.get(logicalName)?.spec;
+  }
+
+  // FIXME(#40): ApplicationConfig には論理名マップがない。呼び出しは ResolvedProviderConfig に統一する。
+  return normalizeProviderConfigFromApplication(config, logicalName);
+}
+
+function normalizeProviderConfigFromApplication(
+  config: ApplicationConfig,
+  logicalName: string,
+): ModelSpec | undefined {
+  return config.models?.find((spec) => spec.model === logicalName);
+}
+
+export function modelHasCacheDir(
+  config: ApplicationConfig | ResolvedProviderConfig,
+  logicalName: string,
+): boolean {
+  const cacheDir = findModelSpec(config, logicalName)?.driverOptions?.cacheDir;
   return typeof cacheDir === "string" && cacheDir.length > 0;
 }
+
+export function getEnabledLogicalModels(
+  config: ResolvedProviderConfig,
+): ResolvedProviderConfig["logicalModels"] {
+  return new Map(
+    [...config.logicalModels.entries()].filter(([, model]) => !model.disabled),
+  );
+}
+
+export type { ResolvedProviderConfig } from "./config/types.js";
+export { normalizeProviderConfig } from "./config/normalize-config.js";
+export {
+  resolveSelection,
+  resolveProcessFallback,
+  resolveDefaultSelection,
+} from "./config/resolve-selection.js";

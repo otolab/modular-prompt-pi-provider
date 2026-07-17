@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { piOptionsToQueryOptions } from "../src/adapter/options.js";
+import { piOptionsToQueryOptions, mergeQueryOptions } from "../src/adapter/options.js";
 import type { Api, Model } from "@earendil-works/pi-ai";
 
 const model = {
@@ -9,6 +9,19 @@ const model = {
 } as Model<Api>;
 
 describe("piOptionsToQueryOptions", () => {
+  it("mergeQueryOptions は override を優先する", () => {
+    expect(
+      mergeQueryOptions(
+        { stream: true, maxTokens: 8192, temperature: 0.7 },
+        { maxTokens: 100, temperature: 0.2 },
+      ),
+    ).toEqual({
+      stream: true,
+      maxTokens: 100,
+      temperature: 0.2,
+    });
+  });
+
   it("sets stream and maps temperature / maxTokens", () => {
     expect(
       piOptionsToQueryOptions({ temperature: 0.5, maxTokens: 100 }, model),

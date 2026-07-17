@@ -1,3 +1,7 @@
+/** コードデフォルト物理モデル（優先度最低） */
+export const DEFAULT_MODEL_FALLBACK =
+  "mlx-community/gemma-4-26B-A4B-it-heretic-4bit";
+
 export const PROVIDER_ID = "modular-prompt-provider";
 export const API_ID = "modular-prompt-provider";
 

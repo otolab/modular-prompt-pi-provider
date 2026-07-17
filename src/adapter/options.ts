@@ -1,6 +1,20 @@
-import type { Api, Model, SimpleStreamOptions } from "@earendil-works/pi-ai";
 import type { QueryOptions } from "@modular-prompt/driver";
+import type { Api, Model, SimpleStreamOptions } from "@earendil-works/pi-ai";
 import { resolveDriverCacheOption } from "./cache-options.js";
+
+/** defaultQueryOptions と Pi 側オプションをマージする（override 優先） */
+export function mergeQueryOptions(
+  base: QueryOptions,
+  override: QueryOptions,
+): QueryOptions {
+  return {
+    ...base,
+    ...override,
+    ...(base.tools || override.tools
+      ? { tools: override.tools ?? base.tools }
+      : {}),
+  };
+}
 
 /**
  * Pi SimpleStreamOptions → driver QueryOptions。
