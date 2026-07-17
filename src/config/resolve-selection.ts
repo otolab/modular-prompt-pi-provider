@@ -27,6 +27,19 @@ export function resolveSelection(
   return undefined;
 }
 
+/** Pi stream 用の model 解決（未登録 id → processes.default） */
+export function resolveStreamSelection(
+  modelId: string,
+  config: ResolvedProviderConfig,
+): ModelSelection | undefined {
+  const direct = resolveSelection(modelId, config);
+  if (direct) {
+    return direct;
+  }
+
+  return resolveProcessFallback(config);
+}
+
 /** processes.default — model id 未決時のフォールバック */
 export function resolveProcessFallback(
   config: ResolvedProviderConfig,

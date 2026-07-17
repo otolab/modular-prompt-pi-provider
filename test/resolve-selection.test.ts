@@ -4,6 +4,7 @@ import {
   resolveDefaultSelection,
   resolveProcessFallback,
   resolveSelection,
+  resolveStreamSelection,
 } from "../src/config/resolve-selection.js";
 
 function baseConfig() {
@@ -66,6 +67,26 @@ describe("resolveProcessFallback", () => {
     expect(fallback?.kind).toBe("logical");
     if (fallback?.kind === "logical") {
       expect(fallback.logicalName).toBe("gemma");
+    }
+  });
+});
+
+describe("resolveStreamSelection", () => {
+  it("未登録 model.id は processes.default にフォールバックする", () => {
+    const config = baseConfig();
+    const selection = resolveStreamSelection("unknown-model", config);
+    expect(selection?.kind).toBe("logical");
+    if (selection?.kind === "logical") {
+      expect(selection.logicalName).toBe("gemma");
+    }
+  });
+
+  it("登録済み model.id は直接解決する", () => {
+    const config = baseConfig();
+    const selection = resolveStreamSelection("gemma", config);
+    expect(selection?.kind).toBe("logical");
+    if (selection?.kind === "logical") {
+      expect(selection.logicalName).toBe("gemma");
     }
   });
 });

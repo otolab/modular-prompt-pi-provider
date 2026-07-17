@@ -7,7 +7,7 @@ import type {
 } from "@earendil-works/pi-ai";
 import { isAborted, formatCompletionPrompt } from "@modular-prompt/driver";
 import { sweepCacheDirBeforeWrite } from "../cache/runtime.js";
-import { findModelSpec, modelHasCacheDir, resolveSelection } from "../config.js";
+import { findModelSpec, modelHasCacheDir, resolveStreamSelection } from "../config.js";
 import { getDriverForLogicalModel } from "../driver/pool.js";
 import { getCacheStats } from "../driver/cache-stats.js";
 import { getResolvedProviderConfig } from "../driver/service.js";
@@ -25,8 +25,9 @@ import { emitToolCallsFromResult } from "./toolcall-emitter.js";
 import { piToolsToToolDefinitions } from "./tools.js";
 import { mapQueryResultUsageToPi } from "./usage.js";
 import { pickMlxDriverDefaultOptions } from "../driver/mlx-options.js";
+import { buildPassthroughRequest, runLogicalPassthroughStream } from "../workflow/index.js";
 
-const PHASE2_VIRTUAL_MODEL_ERROR = "workflow execution not implemented (Phase 2)";
+const PHASE3_VIRTUAL_MODEL_ERROR = "workflow execution not implemented (Phase 3)";
 
 export async function bridgeDriverStreamToPi(
   model: Model<Api>,
@@ -48,14 +49,14 @@ export async function bridgeDriverStreamToPi(
     }
 
     const resolvedConfig = getResolvedProviderConfig();
-    const selection = resolveSelection(model.id, resolvedConfig);
+    const selection = resolveStreamSelection(model.id, resolvedConfig);
 
     if (!selection) {
       throw new Error(`Unknown model "${model.id}". Register it in config.yaml models.`);
     }
 
     if (selection.kind === "virtual") {
-      throw new Error(PHASE2_VIRTUAL_MODEL_ERROR);
+      throw new Error(PHASE3_VIRTUAL_MODEL_ERROR);
     }
 
     const logicalName = selection.logicalName;
@@ -110,12 +111,17 @@ export async function bridgeDriverStreamToPi(
 
     const driver = await getDriverForLogicalModel(logicalName);
     const prompt = piContextToCompiledPrompt(context);
+    const workflowRequest = buildPassthroughRequest(prompt, queryOpts);
 
     if (requestLog) {
       await requestLog.logPrompt(workPhase, formatCompletionPrompt(prompt));
     }
 
-    const { stream, result } = await driver.streamQuery(prompt, queryOpts);
+    const { stream, result } = await runLogicalPassthroughStream(
+      selection,
+      driver,
+      workflowRequest,
+    );
 
     const textIndex = appendTextBlock(output, "");
     piStream.push({ type: "text_start", contentIndex: textIndex, partial: output });
@@ -206,4 +212,4 @@ export async function bridgeDriverStreamToPi(
   }
 }
 
-export { PHASE2_VIRTUAL_MODEL_ERROR };
+export { PHASE3_VIRTUAL_MODEL_ERROR };
