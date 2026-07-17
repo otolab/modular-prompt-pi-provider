@@ -1,8 +1,8 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { closeActiveDriver } from "../driver/pool.js";
+import { closeAllDrivers } from "../driver/pool.js";
 
 export function registerSessionHooks(pi: ExtensionAPI): void {
   pi.on("session_shutdown", async () => {
-    await closeActiveDriver();
+    await closeAllDrivers();
   });
 }

@@ -22,16 +22,19 @@ describe("cache runtime", () => {
         {
           model: "m1",
           provider: "mlx",
+          defaultQueryOptions: { maxTokens: 8192 },
           driverOptions: { cacheDir: "/tmp/cache-a" },
         },
         {
           model: "m2",
           provider: "mlx",
+          defaultQueryOptions: { maxTokens: 8192 },
           driverOptions: { cacheDir: "/tmp/cache-a" },
         },
         {
           model: "m3",
           provider: "mlx",
+          defaultQueryOptions: { maxTokens: 8192 },
           driverOptions: { cacheDir: "/tmp/cache-b" },
         },
       ],
@@ -55,6 +58,7 @@ describe("cache runtime", () => {
         {
           model: "m1",
           provider: "mlx",
+          defaultQueryOptions: { maxTokens: 8192 },
           driverOptions: { cacheDir: "/tmp/cache-x" },
         },
       ],
@@ -81,11 +85,13 @@ describe("cache runtime", () => {
         {
           model: "m1",
           provider: "mlx",
+          defaultQueryOptions: { maxTokens: 8192 },
           driverOptions: { cacheDir: "/tmp/c1" },
         },
         {
           model: "m2",
           provider: "mlx",
+          defaultQueryOptions: { maxTokens: 8192 },
           driverOptions: { cacheDir: "/tmp/c2" },
         },
       ],

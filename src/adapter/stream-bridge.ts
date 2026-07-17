@@ -7,10 +7,10 @@ import type {
 } from "@earendil-works/pi-ai";
 import { isAborted, formatCompletionPrompt } from "@modular-prompt/driver";
 import { sweepCacheDirBeforeWrite } from "../cache/runtime.js";
-import { findModelSpec, modelHasCacheDir } from "../config.js";
-import { getDriverForModel } from "../driver/pool.js";
+import { findModelSpec, modelHasCacheDir, resolveSelection } from "../config.js";
+import { getDriverForLogicalModel } from "../driver/pool.js";
 import { getCacheStats } from "../driver/cache-stats.js";
-import { getApplicationConfig } from "../driver/service.js";
+import { getResolvedProviderConfig } from "../driver/service.js";
 import { setActiveStreamSessionId } from "../cache/session-context.js";
 import { beginRequestLog } from "../logging/runtime.js";
 import { piContextToCompiledPrompt } from "./context-to-prompt.js";
@@ -20,10 +20,13 @@ import {
   createInitialAssistantMessage,
   getTextBlock,
 } from "./message-mapper.js";
-import { piOptionsToQueryOptions } from "./options.js";
+import { mergeQueryOptions, piOptionsToQueryOptions } from "./options.js";
 import { emitToolCallsFromResult } from "./toolcall-emitter.js";
 import { piToolsToToolDefinitions } from "./tools.js";
 import { mapQueryResultUsageToPi } from "./usage.js";
+import { pickMlxDriverDefaultOptions } from "../driver/mlx-options.js";
+
+const PHASE2_VIRTUAL_MODEL_ERROR = "workflow execution not implemented (Phase 2)";
 
 export async function bridgeDriverStreamToPi(
   model: Model<Api>,
@@ -44,30 +47,54 @@ export async function bridgeDriverStreamToPi(
       return;
     }
 
-    const appConfig = getApplicationConfig();
-    const modelSpec = findModelSpec(appConfig, model.id);
-    const hasCacheDir = modelHasCacheDir(appConfig, model.id);
+    const resolvedConfig = getResolvedProviderConfig();
+    const selection = resolveSelection(model.id, resolvedConfig);
+
+    if (!selection) {
+      throw new Error(`Unknown model "${model.id}". Register it in config.yaml models.`);
+    }
+
+    if (selection.kind === "virtual") {
+      throw new Error(PHASE2_VIRTUAL_MODEL_ERROR);
+    }
+
+    const logicalName = selection.logicalName;
+    const modelSpec = findModelSpec(resolvedConfig, logicalName);
+    const hasCacheDir = modelHasCacheDir(resolvedConfig, logicalName);
     setActiveStreamSessionId(options?.sessionId);
-    const queryOpts = {
-      ...piOptionsToQueryOptions(options, model, hasCacheDir),
-      ...(context.tools?.length
-        ? {
-            tools: piToolsToToolDefinitions(context.tools),
-            toolChoice: "auto" as const,
-          }
-        : {}),
-    };
+
+    const defaultQueryOptions = pickMlxDriverDefaultOptions(
+      selection.model.defaultQueryOptions,
+    );
+    const piQueryOpts = piOptionsToQueryOptions(options, model, hasCacheDir);
+    const queryOpts = mergeQueryOptions(
+      {
+        stream: true,
+        ...defaultQueryOptions,
+      },
+      {
+        ...piQueryOpts,
+        ...(context.tools?.length
+          ? {
+              tools: piToolsToToolDefinitions(context.tools),
+              toolChoice: "auto" as const,
+            }
+          : {}),
+      },
+    );
 
     if (requestLog) {
       await requestLog.logIn("request", {
         model: model.id,
+        logicalModel: logicalName,
         sessionId: options?.sessionId,
         messageCount: context.messages.length,
         hasTools: Boolean(context.tools?.length),
         cache: queryOpts.cache,
       });
       await requestLog.logDriverInfo(workPhase, {
-        model: model.id,
+        model: logicalName,
+        physicalModel: modelSpec?.model,
         provider: modelSpec?.provider,
         capabilities: modelSpec?.capabilities,
         cacheDir: modelSpec?.driverOptions?.cacheDir,
@@ -81,7 +108,7 @@ export async function bridgeDriverStreamToPi(
       }
     }
 
-    const driver = await getDriverForModel(model.id);
+    const driver = await getDriverForLogicalModel(logicalName);
     const prompt = piContextToCompiledPrompt(context);
 
     if (requestLog) {
@@ -178,3 +205,5 @@ export async function bridgeDriverStreamToPi(
     piStream.end();
   }
 }
+
+export { PHASE2_VIRTUAL_MODEL_ERROR };

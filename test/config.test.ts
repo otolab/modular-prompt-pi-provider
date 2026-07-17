@@ -6,10 +6,12 @@ import {
   DEFAULT_MLX_MODEL,
   DEFAULT_MODEL_FALLBACK,
   createApplicationConfig,
+  createResolvedProviderConfig,
   findModelSpec,
   modelHasCacheDir,
+  normalizeProviderConfig,
 } from "../src/config.js";
-import { modelSpecToPiProviderModel } from "../src/driver/model-catalog.js";
+import { buildPiProviderModels, modelSpecToPiProviderModel } from "../src/driver/model-catalog.js";
 import { resetAIService } from "../src/driver/service.js";
 import {
   CONFIG_FILENAME,
@@ -34,78 +36,110 @@ describe("config", () => {
     resetAIService();
   });
 
-  it("defaults to gemma heretic 4bit model", () => {
+  it("defaults to gemma heretic 4bit model under logical name default", () => {
     expect(DEFAULT_MLX_MODEL).toBe(DEFAULT_MODEL_FALLBACK);
-  });
-
-  it("registers default model in ApplicationConfig", () => {
-    const config = createApplicationConfig();
-    const spec = findModelSpec(config, DEFAULT_MLX_MODEL);
+    const resolved = createResolvedProviderConfig();
+    expect(resolved.defaultLogicalModel).toBe("default");
+    const spec = findModelSpec(resolved, "default");
+    expect(spec?.model).toBe(DEFAULT_MODEL_FALLBACK);
     expect(spec?.provider).toBe("mlx");
     expect(spec?.capabilities).toContain("streaming");
   });
 
-  it("defaultOptions は MLX python 層に渡るフィールドのみ", () => {
-    const config = createApplicationConfig();
-    const spec = findModelSpec(config, DEFAULT_MLX_MODEL);
+  it("defaultQueryOptions は MLX python 層に渡るフィールドのみ", () => {
+    const resolved = createResolvedProviderConfig();
+    const spec = findModelSpec(resolved, "default");
     expect(spec?.defaultOptions).toEqual({ maxTokens: 8_192 });
     expect(spec?.defaultOptions).not.toHaveProperty("mode");
   });
 
-  it("maps ModelSpec to Pi provider model", () => {
-    const config = createApplicationConfig();
-    const spec = config.models![0]!;
-    const piModel = modelSpecToPiProviderModel(spec);
-    expect(piModel.id).toBe(DEFAULT_MLX_MODEL);
+  it("maps ModelSpec to Pi provider model by logical name", () => {
+    const resolved = createResolvedProviderConfig();
+    const logical = resolved.logicalModels.get("default")!;
+    const piModel = modelSpecToPiProviderModel("default", logical.spec);
+    expect(piModel.id).toBe("default");
+    expect(piModel.name).toBe("default");
     expect(piModel.reasoning).toBe(true);
     expect(piModel.input).toEqual(["text"]);
   });
 
-  it("MODULAR_PROMPT_PI_MODEL でデフォルトモデルを上書きする", () => {
+  it("MODULAR_PROMPT_PI_MODEL でデフォルト物理モデルを上書きする", () => {
     process.env.MODULAR_PROMPT_PI_MODEL = "mlx-community/custom-model";
-    const config = createApplicationConfig();
-    expect(config.models?.[0]?.model).toBe("mlx-community/custom-model");
+    const resolved = createResolvedProviderConfig();
+    expect(findModelSpec(resolved, "default")?.model).toBe("mlx-community/custom-model");
   });
 
-  it("YAML models を ApplicationConfig に反映する", () => {
-    const globalPath = globalConfigPath();
-    const yaml = loadPiProviderConfig({
-      readFile: (path) => {
-        if (path === globalPath) {
-          return `
-models:
-  - model: mlx-community/yaml-model
-    defaultOptions:
-      maxTokens: 4096
-drivers:
-  mlx:
-    pythonPath: /opt/python3
-`;
-        }
-        throw new Error(`unexpected path: ${path}`);
+  it("YAML models マップを ApplicationConfig に反映する", () => {
+    const yaml = {
+      models: {
+        gemma: {
+          provider: "mlx",
+          model: "mlx-community/yaml-model",
+          defaultQueryOptions: { maxTokens: 4096 },
+        },
       },
-      fileExists: (path) => path === globalPath,
-    });
+      providers: {
+        mlx: { pythonPath: "/opt/python3" },
+      },
+    };
 
     const config = createApplicationConfig(yaml);
-    const spec = findModelSpec(config, "mlx-community/yaml-model");
+    const resolved = createResolvedProviderConfig(yaml);
+    const spec = findModelSpec(resolved, "gemma");
     expect(spec?.defaultOptions).toEqual({ maxTokens: 4096 });
     expect(config.drivers?.mlx?.pythonPath).toBe("/opt/python3");
   });
 
-  it("modelHasCacheDir は driverOptions.cacheDir の有無を判定する", () => {
-    const withoutCache = createApplicationConfig();
-    expect(modelHasCacheDir(withoutCache, DEFAULT_MLX_MODEL)).toBe(false);
-
-    const withCache = createApplicationConfig({
+  it("レガシー YAML models[] を論理名 id ?? model で解決する", () => {
+    const yaml = {
       models: [
         {
-          model: "mlx-community/cached",
-          driverOptions: { cacheDir: "/tmp/cache" },
+          id: "my-gemma",
+          model: "mlx-community/yaml-model",
+          defaultOptions: { maxTokens: 2048 },
         },
       ],
+    };
+    const resolved = createResolvedProviderConfig(yaml);
+    expect(findModelSpec(resolved, "my-gemma")?.model).toBe("mlx-community/yaml-model");
+  });
+
+  it("buildPiProviderModels は論理名 + virtualModel を返す", () => {
+    const resolved = normalizeProviderConfig({
+      models: {
+        gemma: {
+          provider: "mlx",
+          model: "mlx-community/gemma",
+          defaultQueryOptions: { maxTokens: 8192 },
+        },
+      },
+      workflow: {
+        agentic: {
+          type: "agentic",
+          modelSet: "default",
+          virtualModel: "agentic-chat",
+        },
+      },
     });
-    expect(modelHasCacheDir(withCache, "mlx-community/cached")).toBe(true);
+    const piModels = buildPiProviderModels(resolved);
+    expect(piModels.map((m) => m.id)).toEqual(["gemma", "agentic-chat"]);
+  });
+
+  it("modelHasCacheDir は driverOptions.cacheDir の有無を判定する", () => {
+    const withoutCache = createResolvedProviderConfig();
+    expect(modelHasCacheDir(withoutCache, "default")).toBe(false);
+
+    const withCache = createResolvedProviderConfig({
+      models: {
+        cached: {
+          provider: "mlx",
+          model: "mlx-community/cached",
+          defaultQueryOptions: { maxTokens: 8192 },
+          driverOptions: { cacheDir: "/tmp/cache" },
+        },
+      },
+    });
+    expect(modelHasCacheDir(withCache, "cached")).toBe(true);
   });
 });
 
@@ -121,7 +155,11 @@ describe("pi-provider-config", () => {
     const files: Record<string, string> = {
       [globalPath]: `
 models:
-  - model: global/model
+  gemma:
+    provider: mlx
+    model: global/model
+    defaultQueryOptions:
+      maxTokens: 8192
 `,
     };
 
@@ -132,7 +170,8 @@ models:
       readFile: (path) => files[path]!,
     });
 
-    expect(config.models?.[0]?.model).toBe("global/model");
+    const models = config.models as Record<string, { model: string }>;
+    expect(models.gemma?.model).toBe("global/model");
   });
 
   it("trust 前はプロジェクト config.yaml を読まない", () => {
@@ -141,11 +180,19 @@ models:
     const files: Record<string, string> = {
       [globalPath]: `
 models:
-  - model: global/model
+  global:
+    provider: mlx
+    model: global/model
+    defaultQueryOptions:
+      maxTokens: 8192
 `,
       [projectPath]: `
 models:
-  - model: project/model
+  project:
+    provider: mlx
+    model: project/model
+    defaultQueryOptions:
+      maxTokens: 8192
 `,
     };
 
@@ -156,7 +203,9 @@ models:
       readFile: (path) => files[path]!,
     });
 
-    expect(config.models?.[0]?.model).toBe("global/model");
+    const models = config.models as Record<string, { model: string }>;
+    expect(models.global?.model).toBe("global/model");
+    expect(models.project).toBeUndefined();
   });
 
   it("trust 後はプロジェクト config.yaml で上書きする", () => {
@@ -165,19 +214,23 @@ models:
     const files: Record<string, string> = {
       [globalPath]: `
 models:
-  - model: global/model
-    defaultOptions:
+  gemma:
+    provider: mlx
+    model: global/model
+    defaultQueryOptions:
       maxTokens: 1000
-drivers:
+providers:
   mlx:
     pythonPath: /global/python
 `,
       [projectPath]: `
 models:
-  - model: project/model
-    defaultOptions:
+  gemma:
+    provider: mlx
+    model: project/model
+    defaultQueryOptions:
       maxTokens: 2000
-drivers:
+providers:
   mlx:
     pythonPath: ~/project/python
 `,
@@ -190,10 +243,14 @@ drivers:
       readFile: (path) => files[path]!,
     });
 
-    expect(config.models?.[0]?.model).toBe("project/model");
-    expect(config.models?.[0]?.defaultOptions?.maxTokens).toBe(2000);
-    expect(config.drivers?.mlx?.pythonPath).toContain("project/python");
-    expect(config.models?.[0]?.driverOptions?.cacheDir).toBe(
+    const models = config.models as Record<
+      string,
+      { model: string; defaultQueryOptions?: { maxTokens?: number }; driverOptions?: { cacheDir?: string } }
+    >;
+    expect(models.gemma?.model).toBe("project/model");
+    expect(models.gemma?.defaultQueryOptions?.maxTokens).toBe(2000);
+    expect(config.providers?.mlx?.pythonPath).toContain("project/python");
+    expect(models.gemma?.driverOptions?.cacheDir).toBe(
       join("/project", CONFIG_DIR_NAME, PLUGIN_DIR_NAME, "cache"),
     );
   });
@@ -232,7 +289,11 @@ logging:
     const files: Record<string, string> = {
       [globalPath]: `
 models:
-  - model: m1
+  default:
+    provider: mlx
+    model: m1
+    defaultQueryOptions:
+      maxTokens: 8192
 `,
     };
 

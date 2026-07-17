@@ -10,10 +10,12 @@ export const PLUGIN_DIR_NAME = "modular-prompt-provider";
 /** プラグイン設定ファイル名（`modular-prompt-provider/config.yaml`） */
 export const CONFIG_FILENAME = "config.yaml";
 
-/** YAML `models[]` の 1 エントリ */
+/** YAML `models[]` の 1 エントリ（レガシー配列形式） */
 export interface PiProviderYamlModelEntry {
+  id?: string;
   model: string;
   provider?: string;
+  disabled?: boolean;
   capabilities?: string[];
   maxInputTokens?: number;
   maxOutputTokens?: number;
@@ -31,17 +33,66 @@ export interface PiProviderYamlModelEntry {
     topP?: number;
     topK?: number;
   };
+  defaultQueryOptions?: {
+    maxTokens?: number;
+    temperature?: number;
+    topP?: number;
+    topK?: number;
+  };
 }
 
 /** modular-prompt-provider/config.yaml の生データ */
 export interface PiProviderYamlConfig {
-  models?: PiProviderYamlModelEntry[];
+  /** 新形式: 論理名 → 定義。レガシー: 配列 */
+  models?:
+    | PiProviderYamlModelEntry[]
+    | Record<
+        string,
+        {
+          provider: string;
+          model: string;
+          defaultQueryOptions: PiProviderYamlModelEntry["defaultQueryOptions"];
+          disabled?: boolean;
+          capabilities?: string[];
+          maxInputTokens?: number;
+          maxOutputTokens?: number;
+          priority?: number;
+          driverOptions?: PiProviderYamlModelEntry["driverOptions"];
+        }
+      >;
+  /** @deprecated {@link providers} を使用 */
   drivers?: {
     mlx?: {
       baseURL?: string;
       pythonPath?: string;
     };
   };
+  providers?: {
+    mlx?: {
+      baseURL?: string;
+      pythonPath?: string;
+    };
+    mlx_lm?: {
+      baseURL?: string;
+      pythonPath?: string;
+    };
+    [key: string]:
+      | {
+          baseURL?: string;
+          pythonPath?: string;
+        }
+      | undefined;
+  };
+  modelSets?: Record<string, Record<string, string>>;
+  workflow?: Record<
+    string,
+    {
+      type: "passthrough" | "agentic";
+      modelSet?: string;
+      virtualModel?: string;
+    }
+  >;
+  processes?: Record<string, { model: string }>;
   cache?: {
     maxAgeDays?: number;
     maxSizeGb?: number;
@@ -81,23 +132,86 @@ export function expandPath(value: string, homeDir: string = homedir()): string {
   return value;
 }
 
+function expandProviderPaths(
+  providers: PiProviderYamlConfig["providers"],
+  homeDir: string,
+): PiProviderYamlConfig["providers"] {
+  if (!providers) {
+    return undefined;
+  }
+
+  const expanded: NonNullable<PiProviderYamlConfig["providers"]> = {};
+  for (const [name, provider] of Object.entries(providers)) {
+    if (!provider) {
+      continue;
+    }
+    expanded[name] = {
+      ...provider,
+      ...(provider.pythonPath
+        ? { pythonPath: expandPath(provider.pythonPath, homeDir) }
+        : {}),
+      ...(provider.baseURL ? { baseURL: expandPath(provider.baseURL, homeDir) } : {}),
+    };
+  }
+  return expanded;
+}
+
+function expandModelEntryPaths(
+  entry: PiProviderYamlModelEntry,
+  homeDir: string,
+): PiProviderYamlModelEntry {
+  return {
+    ...entry,
+    driverOptions: entry.driverOptions
+      ? {
+          ...entry.driverOptions,
+          ...(entry.driverOptions.cacheDir
+            ? { cacheDir: expandPath(entry.driverOptions.cacheDir, homeDir) }
+            : {}),
+        }
+      : undefined,
+  };
+}
+
+function expandModelsMapPaths(
+  models: NonNullable<Exclude<PiProviderYamlConfig["models"], PiProviderYamlModelEntry[]>>,
+  homeDir: string,
+): NonNullable<Exclude<PiProviderYamlConfig["models"], PiProviderYamlModelEntry[]>> {
+  const expanded: NonNullable<
+    Exclude<PiProviderYamlConfig["models"], PiProviderYamlModelEntry[]>
+  > = {};
+
+  for (const [logicalName, definition] of Object.entries(models)) {
+    expanded[logicalName] = {
+      ...definition,
+      driverOptions: definition.driverOptions
+        ? {
+            ...definition.driverOptions,
+            ...(definition.driverOptions.cacheDir
+              ? { cacheDir: expandPath(definition.driverOptions.cacheDir, homeDir) }
+              : {}),
+          }
+        : undefined,
+    };
+  }
+
+  return expanded;
+}
+
 function expandPathFields(
   config: PiProviderYamlConfig,
   homeDir: string,
 ): PiProviderYamlConfig {
+  const expandedModels = Array.isArray(config.models)
+    ? config.models.map((entry) => expandModelEntryPaths(entry, homeDir))
+    : config.models
+      ? expandModelsMapPaths(config.models, homeDir)
+      : undefined;
+
   const expanded: PiProviderYamlConfig = {
     ...config,
-    models: config.models?.map((entry) => ({
-      ...entry,
-      driverOptions: entry.driverOptions
-        ? {
-            ...entry.driverOptions,
-            ...(entry.driverOptions.cacheDir
-              ? { cacheDir: expandPath(entry.driverOptions.cacheDir, homeDir) }
-              : {}),
-          }
-        : undefined,
-    })),
+    models: expandedModels,
+    providers: expandProviderPaths(config.providers, homeDir),
     drivers: config.drivers
       ? {
           ...config.drivers,
@@ -131,10 +245,25 @@ function mergeYamlConfig(
   base: PiProviderYamlConfig,
   override: PiProviderYamlConfig,
 ): PiProviderYamlConfig {
+  const mergedProviders = {
+    ...base.providers,
+    ...override.providers,
+  };
+
+  for (const [name, provider] of Object.entries(override.providers ?? {})) {
+    if (provider) {
+      mergedProviders[name] = {
+        ...base.providers?.[name],
+        ...provider,
+      };
+    }
+  }
+
   return {
     ...base,
     ...override,
     models: override.models ?? base.models,
+    providers: Object.keys(mergedProviders).length > 0 ? mergedProviders : undefined,
     drivers: {
       ...base.drivers,
       ...override.drivers,
@@ -142,6 +271,18 @@ function mergeYamlConfig(
         ...base.drivers?.mlx,
         ...override.drivers?.mlx,
       },
+    },
+    modelSets: {
+      ...base.modelSets,
+      ...override.modelSets,
+    },
+    workflow: {
+      ...base.workflow,
+      ...override.workflow,
+    },
+    processes: {
+      ...base.processes,
+      ...override.processes,
     },
     cache: {
       ...base.cache,
@@ -301,19 +442,41 @@ function applyDefaultCacheDirs(
   config: PiProviderYamlConfig,
   scope: { cwd: string; isProjectTrusted: boolean; usedProjectConfig: boolean },
 ): PiProviderYamlConfig {
-  if (!config.models?.length) {
+  if (!config.models) {
     return config;
   }
 
   const defaultCacheDir = resolveDefaultCacheDir(scope);
+
+  if (Array.isArray(config.models)) {
+    return {
+      ...config,
+      models: config.models.map((entry) => ({
+        ...entry,
+        driverOptions: {
+          ...entry.driverOptions,
+          cacheDir: entry.driverOptions?.cacheDir ?? defaultCacheDir,
+        },
+      })),
+    };
+  }
+
+  const modelsWithCache: NonNullable<
+    Exclude<PiProviderYamlConfig["models"], PiProviderYamlModelEntry[]>
+  > = {};
+
+  for (const [logicalName, definition] of Object.entries(config.models)) {
+    modelsWithCache[logicalName] = {
+      ...definition,
+      driverOptions: {
+        ...definition.driverOptions,
+        cacheDir: definition.driverOptions?.cacheDir ?? defaultCacheDir,
+      },
+    };
+  }
+
   return {
     ...config,
-    models: config.models.map((entry) => ({
-      ...entry,
-      driverOptions: {
-        ...entry.driverOptions,
-        cacheDir: entry.driverOptions?.cacheDir ?? defaultCacheDir,
-      },
-    })),
+    models: modelsWithCache,
   };
 }

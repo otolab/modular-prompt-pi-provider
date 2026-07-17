@@ -4,18 +4,23 @@ import type { QueryOptions } from "@modular-prompt/driver";
 import { TestDriver } from "@modular-prompt/driver";
 import { API_ID, PROVIDER_ID } from "../src/constants.js";
 import { getActiveStreamSessionId, resetActiveStreamSessionId } from "../src/cache/session-context.js";
-import { getDriverForModel } from "../src/driver/pool.js";
-import { getApplicationConfig } from "../src/driver/service.js";
+import { getDriverForLogicalModel } from "../src/driver/pool.js";
+import { getResolvedProviderConfig } from "../src/driver/service.js";
 import { streamModularPromptMlx } from "../src/stream-simple.js";
+import { createResolvedProviderConfig } from "../src/config.js";
 
 vi.mock("../src/driver/pool.js", () => ({
   getDriverForModel: vi.fn(),
+  getDriverForLogicalModel: vi.fn(),
+  closeAllDrivers: vi.fn(),
   closeActiveDriver: vi.fn(),
 }));
 
 vi.mock("../src/driver/service.js", () => ({
   getApplicationConfig: vi.fn(),
+  getResolvedProviderConfig: vi.fn(),
   initApplicationConfig: vi.fn(),
+  initResolvedProviderConfig: vi.fn(),
   getAIService: vi.fn(),
   resetAIService: vi.fn(),
 }));
@@ -32,6 +37,19 @@ const model = {
   contextWindow: 128_000,
   maxTokens: 8_192,
 } as Model<Api>;
+
+function mockResolvedConfig() {
+  return createResolvedProviderConfig({
+    models: {
+      "test-model": {
+        provider: "mlx",
+        model: "mlx-community/test-model",
+        defaultQueryOptions: { maxTokens: 8192 },
+        driverOptions: { cacheDir: "/tmp/modular-prompt-cache" },
+      },
+    },
+  });
+}
 
 function baseContext(): Context {
   return {
@@ -57,22 +75,20 @@ async function collectStream(stream: ReturnType<typeof streamModularPromptMlx>) 
 
 describe("streamModularPromptMlx (TestDriver)", () => {
   beforeEach(() => {
-    vi.mocked(getDriverForModel).mockReset();
-    vi.mocked(getApplicationConfig).mockReturnValue({
-      models: [{ model: "test-model", provider: "mlx", capabilities: [] }],
-    });
+    vi.mocked(getDriverForLogicalModel).mockReset();
+    vi.mocked(getResolvedProviderConfig).mockReturnValue(mockResolvedConfig());
     resetActiveStreamSessionId();
   });
 
   it("emits start → text_* → done（Pi handleStreaming 相当）", async () => {
-    vi.mocked(getDriverForModel).mockResolvedValue(
+    vi.mocked(getDriverForLogicalModel).mockResolvedValue(
       new TestDriver({ responses: ["1 2 3"] }),
     );
 
     const stream = streamModularPromptMlx(model, baseContext());
     const { events, message } = await collectStream(stream);
 
-    expect(getDriverForModel).toHaveBeenCalledWith("test-model");
+    expect(getDriverForLogicalModel).toHaveBeenCalledWith("test-model");
     expect(events[0]?.type).toBe("start");
     expect(events.at(-1)?.type).toBe("done");
 
@@ -105,7 +121,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
   });
 
   it("emits error event instead of throwing when driver fails", async () => {
-    vi.mocked(getDriverForModel).mockResolvedValue(new TestDriver({ responses: [] }));
+    vi.mocked(getDriverForLogicalModel).mockResolvedValue(new TestDriver({ responses: [] }));
 
     const { events, message } = await collectStream(
       streamModularPromptMlx(model, baseContext()),
@@ -122,7 +138,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
   });
 
   it("emits toolcall_* after text_end when TestDriver returns toolCalls", async () => {
-    vi.mocked(getDriverForModel).mockResolvedValue(
+    vi.mocked(getDriverForLogicalModel).mockResolvedValue(
       new TestDriver({
         responses: [
           {
@@ -157,19 +173,8 @@ describe("streamModularPromptMlx (TestDriver)", () => {
   });
 
   it("streamQuery に cache オプションと sessionId を渡す", async () => {
-    vi.mocked(getApplicationConfig).mockReturnValue({
-      models: [
-        {
-          model: "test-model",
-          provider: "mlx",
-          capabilities: [],
-          driverOptions: { cacheDir: "/tmp/modular-prompt-cache" },
-        },
-      ],
-    });
-
     let capturedOptions: QueryOptions | undefined;
-    vi.mocked(getDriverForModel).mockResolvedValue(
+    vi.mocked(getDriverForLogicalModel).mockResolvedValue(
       new TestDriver({
         responses: (_prompt, options) => {
           capturedOptions = options;
@@ -191,19 +196,8 @@ describe("streamModularPromptMlx (TestDriver)", () => {
   });
 
   it("cacheRetention none のとき streamQuery cache は false", async () => {
-    vi.mocked(getApplicationConfig).mockReturnValue({
-      models: [
-        {
-          model: "test-model",
-          provider: "mlx",
-          capabilities: [],
-          driverOptions: { cacheDir: "/tmp/modular-prompt-cache" },
-        },
-      ],
-    });
-
     let capturedOptions: QueryOptions | undefined;
-    vi.mocked(getDriverForModel).mockResolvedValue(
+    vi.mocked(getDriverForLogicalModel).mockResolvedValue(
       new TestDriver({
         responses: (_prompt, options) => {
           capturedOptions = options;
@@ -219,5 +213,33 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     );
 
     expect(capturedOptions?.cache).toBe(false);
+  });
+
+  it("virtualModel 選択時は Phase 2 未実装エラー", async () => {
+    vi.mocked(getResolvedProviderConfig).mockReturnValue(
+      createResolvedProviderConfig({
+        models: {
+          gemma: {
+            provider: "mlx",
+            model: "mlx-community/gemma",
+            defaultQueryOptions: { maxTokens: 8192 },
+          },
+        },
+        workflow: {
+          agentic: {
+            type: "agentic",
+            virtualModel: "agentic-chat",
+          },
+        },
+      }),
+    );
+
+    const virtualModel = { ...model, id: "agentic-chat" };
+    const { events, message } = await collectStream(
+      streamModularPromptMlx(virtualModel, baseContext()),
+    );
+
+    expect(events.at(-1)?.type).toBe("error");
+    expect(message.errorMessage).toContain("workflow execution not implemented (Phase 2)");
   });
 });

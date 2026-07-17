@@ -2,19 +2,42 @@
 # または .pi/modular-prompt-provider/config.yaml
 #
 # 優先度: プロジェクト（trust 後）> グローバル > MODULAR_PROMPT_PI_MODEL > コードデフォルト
-# 詳細: docs/configuration.md
+# 詳細: docs/configuration.md, docs/workflow.md
 
-models:
-  - model: mlx-community/gemma-4-26B-A4B-it-heretic-4bit
-    provider: mlx
-    driverOptions:
-      cacheDir: ~/.pi/agent/modular-prompt-provider/cache
-    defaultOptions:
-      maxTokens: 8192
-
-drivers:
+providers:
   mlx:
     pythonPath: ~/.local/share/mise/shims/python3
+
+models:
+  default:
+    provider: mlx
+    model: mlx-community/gemma-4-26B-A4B-it-heretic-4bit
+    driverOptions:
+      cacheDir: ~/.pi/agent/modular-prompt-provider/cache
+    defaultQueryOptions:
+      maxTokens: 8192
+      temperature: 0.7
+
+  gemma-4-ja:
+    provider: mlx
+    model: mlx-community/gemma-4-26B-A4B-it-heretic-4bit
+    defaultQueryOptions:
+      maxTokens: 8192
+
+modelSets:
+  default:
+    chat: gemma-4-ja
+    default: default
+
+workflow:
+  agentic:
+    type: agentic
+    modelSet: default
+    virtualModel: agentic-chat
+
+processes:
+  default:
+    model: gemma-4-ja
 
 cache:
   maxAgeDays: 7

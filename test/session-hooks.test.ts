@@ -1,19 +1,21 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { closeActiveDriver } from "../src/driver/pool.js";
+import { closeAllDrivers } from "../src/driver/pool.js";
 import { registerSessionHooks } from "../src/hooks/session.js";
 
 vi.mock("../src/driver/pool.js", () => ({
+  closeAllDrivers: vi.fn(),
   closeActiveDriver: vi.fn(),
+  getDriverForModel: vi.fn(),
 }));
 
 describe("registerSessionHooks", () => {
   beforeEach(() => {
-    vi.mocked(closeActiveDriver).mockReset();
-    vi.mocked(closeActiveDriver).mockResolvedValue(undefined);
+    vi.mocked(closeAllDrivers).mockReset();
+    vi.mocked(closeAllDrivers).mockResolvedValue(undefined);
   });
 
-  it("session_shutdown で closeActiveDriver を呼ぶ", async () => {
+  it("session_shutdown で closeAllDrivers を呼ぶ", async () => {
     const handlers = new Map<string, (...args: unknown[]) => unknown>();
     const pi = {
       on: vi.fn((event: string, handler: (...args: unknown[]) => unknown) => {
@@ -29,6 +31,6 @@ describe("registerSessionHooks", () => {
     expect(handler).toBeDefined();
     await handler!({ type: "session_shutdown", reason: "quit" }, {});
 
-    expect(closeActiveDriver).toHaveBeenCalledOnce();
+    expect(closeAllDrivers).toHaveBeenCalledOnce();
   });
 });
