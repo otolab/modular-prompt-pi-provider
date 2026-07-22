@@ -37,6 +37,11 @@ function validateProcesses(config: ResolvedProviderConfig): void {
         `processes.${processName}.model "${process.model}" is not a registered logical model or virtualModel.`,
       );
     }
+    if (processName === "default" && selection.kind === "virtual") {
+      throw new Error(
+        `processes.default.model "${process.model}" must be a logical model, not virtualModel.`,
+      );
+    }
   }
 }
 
@@ -58,6 +63,12 @@ function validateWorkflows(config: ResolvedProviderConfig): void {
 
     if (!workflow.virtualModel) {
       continue;
+    }
+
+    if (!workflow.modelSet) {
+      throw new Error(
+        `workflow.${workflowKey}.virtualModel requires modelSet.`,
+      );
     }
 
     const duplicateKey = seenVirtualModels.get(workflow.virtualModel);

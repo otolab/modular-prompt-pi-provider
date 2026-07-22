@@ -120,5 +120,10 @@ export {
   resolveProcessFallback,
   resolveDefaultSelection,
   resolveStreamSelection,
+  resolveStreamSelectionWithSource,
   formatStreamSelectionError,
 } from "./config/resolve-selection.js";
+export {
+  resolveModelSetLogicalName,
+  resolvePassthroughLogicalName,
+} from "./config/resolve-model-set.js";

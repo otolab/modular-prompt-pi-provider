@@ -40,6 +40,26 @@ export function resolveStreamSelection(
   return resolveProcessFallback(config);
 }
 
+export type StreamSelectionSource = "model.id" | "processes.default";
+
+/** stream 解決とフォールバック経路 */
+export function resolveStreamSelectionWithSource(
+  modelId: string,
+  config: ResolvedProviderConfig,
+): { selection: ModelSelection; source: StreamSelectionSource } | undefined {
+  const direct = resolveSelection(modelId, config);
+  if (direct) {
+    return { selection: direct, source: "model.id" };
+  }
+
+  const fallback = resolveProcessFallback(config);
+  if (fallback) {
+    return { selection: fallback, source: "processes.default" };
+  }
+
+  return undefined;
+}
+
 /** processes.default — model id 未決時のフォールバック */
 export function resolveProcessFallback(
   config: ResolvedProviderConfig,

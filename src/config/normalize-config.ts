@@ -197,6 +197,7 @@ export function resolveLogicalModels(
   if (isLegacyModelsArray(yaml.models)) {
     for (const entry of yaml.models) {
       const { logicalName, definition } = legacyEntryToDefinition(entry);
+      validateLogicalModelDefinition(logicalName, definition);
       result.set(logicalName, logicalModelToSpec(logicalName, definition, providers));
     }
     return result;

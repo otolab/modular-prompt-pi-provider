@@ -93,14 +93,15 @@ describe("validateProviderConfig", () => {
             defaultQueryOptions: { maxTokens: 8192 },
           },
         },
+        modelSets: {
+          default: { chat: "agentic-chat" },
+        },
         workflow: {
           agentic: {
             type: "agentic",
+            modelSet: "default",
             virtualModel: "agentic-chat",
           },
-        },
-        modelSets: {
-          default: { chat: "agentic-chat" },
         },
       }),
     ).toThrow(/must reference a logical model, not virtualModel/);
@@ -125,6 +126,53 @@ describe("validateProviderConfig", () => {
     ).toThrow(/workflow\.broken\.type/);
   });
 
+  it("processes.default が virtualModel を参照するとエラー", () => {
+    expect(() =>
+      normalizeProviderConfig({
+        models: {
+          gemma: {
+            provider: "mlx",
+            model: "mlx-community/gemma",
+            defaultQueryOptions: { maxTokens: 8192 },
+          },
+        },
+        modelSets: {
+          default: { default: "gemma" },
+        },
+        workflow: {
+          agentic: {
+            type: "agentic",
+            modelSet: "default",
+            virtualModel: "agentic-chat",
+          },
+        },
+        processes: {
+          default: { model: "agentic-chat" },
+        },
+      }),
+    ).toThrow(/must be a logical model, not virtualModel/);
+  });
+
+  it("virtualModel は modelSet 必須", () => {
+    expect(() =>
+      normalizeProviderConfig({
+        models: {
+          gemma: {
+            provider: "mlx",
+            model: "mlx-community/gemma",
+            defaultQueryOptions: { maxTokens: 8192 },
+          },
+        },
+        workflow: {
+          agentic: {
+            type: "agentic",
+            virtualModel: "agentic-chat",
+          },
+        },
+      }),
+    ).toThrow(/requires modelSet/);
+  });
+
   it("virtualModel の重複はエラー", () => {
     expect(() =>
       normalizeProviderConfig({
@@ -136,8 +184,11 @@ describe("validateProviderConfig", () => {
           },
         },
         workflow: {
-          a: { type: "agentic", virtualModel: "dup" },
-          b: { type: "passthrough", virtualModel: "dup" },
+          a: { type: "agentic", modelSet: "default", virtualModel: "dup" },
+          b: { type: "passthrough", modelSet: "default", virtualModel: "dup" },
+        },
+        modelSets: {
+          default: { default: "gemma" },
         },
       }),
     ).toThrow(/duplicates workflow\.a\.virtualModel/);

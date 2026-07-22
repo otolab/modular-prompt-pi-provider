@@ -30,3 +30,25 @@ export function getCacheStats(driver: AIDriver): MlxCacheStats | undefined {
     return undefined;
   }
 }
+
+/**
+ * DriverSet 内のユニーク driver から KV キャッシュ統計を取得する。
+ * 同一 driver が複数 role に割り当てられている場合は重複除外する。
+ */
+export function getAllCacheStats(
+  driverSet: Record<string, AIDriver>,
+): Record<string, MlxCacheStats> {
+  const seen = new Set<AIDriver>();
+  const result: Record<string, MlxCacheStats> = {};
+
+  for (const [role, driver] of Object.entries(driverSet)) {
+    if (seen.has(driver)) continue;
+    seen.add(driver);
+    const stats = getCacheStats(driver);
+    if (stats) {
+      result[role] = stats;
+    }
+  }
+
+  return result;
+}

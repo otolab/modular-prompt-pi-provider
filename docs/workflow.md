@@ -58,14 +58,23 @@ workflow:
 - `virtualModel` は models とは別名前空間
 - Phase 1: Pi 一覧に載せるのみ。agentic 選択時は Phase 3 エラー
 - Phase 2: 論理モデルは暗黙 passthrough workflow 経由で実行
-- Phase 3: virtualModel + agentic workflow 実行
+- Phase 3: virtualModel + agentic workflow 実行（agentic は非ストリーム）
 
 ### processes
 
 LLM を呼ぶ処理ごとのモデル割当。Pi には非表示。
 
-- `processes.default` は **model id 未決時のフォールバック** のみ
-- 通常は Pi が渡す `model.id` を使用
+- `processes.default` は **Pi が渡す `model.id` が未登録のとき**にフォールバック（登録済み id はそのまま使用）
+- `processes.default.model` は論理名のみ（virtualModel 不可）
+
+### workflow 実行（Phase 3）
+
+| workflow.type | 挙動 |
+|---|---|
+| `passthrough` | modelSet の `chat`（なければ `default`）論理モデルで passthrough ストリーム |
+| `agentic` | modelSet から DriverSet を構築し `agenticProcess` 実行（非ストリーム） |
+
+`virtualModel` には `modelSet` が必須。
 
 ## ランタイム解決
 
@@ -75,7 +84,7 @@ LLM を呼ぶ処理ごとのモデル割当。Pi には非表示。
 |---|---|
 | models 論理名 | `resolveStreamSelection` → passthrough workflow → driver |
 | 未登録 id | `processes.default` にフォールバック（設定時） |
-| virtualModel 名 | `resolveSelection` → workflow（Phase 3 未実装） |
+| virtualModel 名 | `resolveSelection` → workflow 実行（passthrough / agentic） |
 
 ### Driver 保持
 
@@ -97,8 +106,8 @@ mergeQueryOptions(
 | Phase | 内容 | 状態 |
 |---|---|---|
 | 1 | 型・正規化・名前解決・driver レジストリ・ドキュメント | 完了 |
-| 2 | passthrough workflow + stream 配線 | 本 PR |
-| 3 | virtualModel + agentic workflow | 未着手 |
+| 2 | passthrough workflow + stream 配線 | 完了 |
+| 3 | virtualModel + agentic workflow | 本 PR |
 
 ## 関連ファイル
 
@@ -108,7 +117,10 @@ mergeQueryOptions(
 | `src/config/normalize-config.ts` | YAML → ResolvedProviderConfig |
 | `src/config/resolve-selection.ts` | model.id 解決・フォールバック |
 | `src/workflow/passthrough.ts` | passthrough workflow 実行 |
-| `src/workflow/runner.ts` | 論理モデル向け workflow 入口 |
+| `src/workflow/run-virtual.ts` | virtualModel workflow ディスパッチ |
+| `src/workflow/agentic.ts` | agentic workflow |
+| `src/workflow/driver-set.ts` | modelSet → DriverSet |
+| `src/config/resolve-model-set.ts` | modelSet 役割解決 |
 | `src/driver/model-registry.ts` | 論理モデルごと driver |
 | `src/driver/model-catalog.ts` | Pi モデル一覧生成 |
 | `src/adapter/stream-bridge.ts` | 解決 + workflow + stream 橋渡し |
