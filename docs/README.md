@@ -18,6 +18,7 @@
 | 9 | [compaction.md](./compaction.md) | compact・overflow 回復 |
 | 10 | [logging.md](./logging.md) | JSONL デバッグログ・extract-log |
 | 11 | [implementation-plan.md](./implementation-plan.md) | ファイル構成・テスト |
+| 11b | [testing.md](./testing.md) | テスト戦略（Unit / Integration / Experiment） |
 | 12 | [distribution.md](./distribution.md) | 配布・npm・インストール |
 
 ## 外部参照
