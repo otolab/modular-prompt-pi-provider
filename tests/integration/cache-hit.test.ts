@@ -25,13 +25,13 @@ if (!probe.cacheSupported) {
   console.info(`[integration] MLX KV cache tests skipped: ${reason}`);
 }
 
-function buildModelSpec(modelId: string, cacheDir: string) {
+function buildModelSpec(modelId: string, cacheDir?: string) {
   return {
     model: modelId,
     provider: "mlx" as const,
     capabilities: INTEGRATION_DRIVER_CAPABILITIES,
     maxOutputTokens: 64,
-    driverOptions: { cacheDir },
+    ...(cacheDir ? { driverOptions: { cacheDir } } : {}),
     defaultOptions: { maxTokens: 32, temperature: 0 },
   };
 }
@@ -151,7 +151,10 @@ describe.skipIf(!probe.cacheSupported)("MLX KV cache (Pi stream)", () => {
         sweepOnStartup: false,
         sweepBeforeWrite: false,
       },
-      models: [buildModelSpec(modelId, cacheDir)],
+      providers: {
+        mlx: { cacheDir },
+      },
+      models: [buildModelSpec(modelId)],
     });
   });
 
@@ -164,7 +167,7 @@ describe.skipIf(!probe.cacheSupported)("MLX KV cache (Pi stream)", () => {
     await rm(cacheDir, { recursive: true, force: true });
   });
 
-  it.skip("同一プロンプトの 2 回目で KV キャッシュが効く — Pi stream 経路では usage/stats に cache が載らない（要調査）", async () => {
+  it("同一プロンプトの 2 回目で KV キャッシュが効く", async () => {
     const context = cacheableContext("integration-cache-hit-round");
     const streamOptions = {
       sessionId: "integration-cache-session",
@@ -203,7 +206,7 @@ describe.skipIf(!probe.cacheSupported)("MLX KV cache (Pi stream)", () => {
     expect(second.usage?.cacheWrite ?? 0).toBe(0);
   });
 
-  it.skip("metadata.cache read-only は読み取りのみで書き込まない — Pi stream 経路では cacheRead が載らない（要調査）", async () => {
+  it("metadata.cache read-only は読み取りのみで書き込まない", async () => {
     const context = cacheableContext("integration-read-only-round");
     await collectAssistantMessage(
       streamModularPrompt(piModel, context, {
