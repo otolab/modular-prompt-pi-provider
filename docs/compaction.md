@@ -123,5 +123,7 @@ pi.on("context", async (event, ctx) => {
 | ファイル | 内容 |
 |---|---|
 | `src/hooks/overflow-rewrite.ts` | `message_end` 登録 |
+| `src/compact/` | 汎用 Compact 機構（[#58](https://github.com/otolab/modular-prompt-pi-provider/issues/58)） |
 | `src/hooks/compaction.ts` | `session_before_compact` 登録 |
-| `src/prompts/compaction.ts` | 要約 Prompt テンプレート |
+
+設計の背景: [modular-prompt-structure.md](./modular-prompt-structure.md)（`streamProcess` ベース）
