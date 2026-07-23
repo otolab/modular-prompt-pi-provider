@@ -11,3 +11,5 @@ export {
   resolveCompactStrategy,
 } from "./registry.js";
 export { runCompact } from "./runner.js";
+export type { CompactWorkflowLogger } from "./logging.js";
+export { createCompactWorkflowLogger } from "./logging.js";

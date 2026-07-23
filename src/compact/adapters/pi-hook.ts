@@ -2,6 +2,7 @@ import { convertToLlm, serializeConversation } from "@earendil-works/pi-coding-a
 import type { SessionBeforeCompactEvent } from "@earendil-works/pi-coding-agent";
 import type { AIDriver } from "@modular-prompt/driver";
 import { runCompact } from "../runner.js";
+import type { CompactWorkflowLogger } from "../logging.js";
 import type { CompactChunk, CompactInput } from "../types.js";
 
 type CompactionPreparation = SessionBeforeCompactEvent["preparation"];
@@ -71,6 +72,7 @@ export interface RunPiCompactOptions {
   maxChunk?: number;
   signal?: AbortSignal;
   getDriver: (logicalName: string) => Promise<AIDriver>;
+  logger?: CompactWorkflowLogger;
 }
 
 export interface RunPiCompactResult {
@@ -101,6 +103,7 @@ export async function runPiCompact(
     signal: options.signal,
     tokenLimit: options.tokenLimit,
     maxChunk: options.maxChunk,
+    logger: options.logger,
   });
 
   if (options.signal?.aborted || !result.summary.trim()) {

@@ -140,7 +140,7 @@ modular-prompt-pi-provider/
 | 選定理由 | text-only LM（KV キャッシュ対応）。1.7B 2bit でインテグレーションのサイズ・速度に最適 |
 | 上書き | `INTEGRATION_MLX_MODEL` 環境変数 |
 | スキップ | `SKIP_INTEGRATION=1`、または MLX 未導入・VLM 等でプローブ失敗時 |
-| 主なテスト | `tests/integration/cache-hit.test.ts`（KV キャッシュ hit / `cacheRetention: none` / read-only） |
+| 主なテスト | `tests/integration/cache-hit.test.ts`（KV キャッシュ）、`tests/integration/compact.test.ts`（compact 要約） |
 
 アプリのコードデフォルト（Gemma 4 VLM）は KV キャッシュ非対応のため、インテグレーションでは **`MODULAR_PROMPT_PI_MODEL` にフォールバックしない**。
 
@@ -178,6 +178,7 @@ modular-prompt-pi-provider/
 | `test/resolve-selection.test.ts` | model.id 解決 | ✅ |
 | `test/stream-events.test.ts` | ストリーム契約（TestDriver） | ✅ |
 | `tests/integration/cache-hit.test.ts` | MLX KV キャッシュ（実機） | ✅ |
+| `tests/integration/compact.test.ts` | MLX compact 要約（実機） | ✅ |
 
 ユニットテストは vitest。MLX 実機は `tests/integration/`（`vitest.integration.config.ts`）。Pi 公式テスト（stream / tokens / abort）は別途。
 

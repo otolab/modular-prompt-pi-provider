@@ -1,4 +1,5 @@
 import type { AIDriver } from "@modular-prompt/driver";
+import type { CompactWorkflowLogger } from "./logging.js";
 
 /** streamProcess に渡す 1 チャンク */
 export interface CompactChunk {
@@ -33,4 +34,7 @@ export interface CompactRunContext {
   signal?: AbortSignal;
   tokenLimit?: number;
   maxChunk?: number;
+  /** summarize-process: 分析フェーズを有効にする（デフォルト true） */
+  enableAnalysis?: boolean;
+  logger?: CompactWorkflowLogger;
 }

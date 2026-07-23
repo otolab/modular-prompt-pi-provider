@@ -1,5 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { runPiCompact } from "../compact/adapters/pi-hook.js";
+import { createCompactWorkflowLogger } from "../compact/logging.js";
+import { beginRequestLog } from "../logging/runtime.js";
 import { resolveCompactStrategy } from "../compact/registry.js";
 import { STREAM_SUMMARIZE_STRATEGY_ID } from "../compact/strategies/stream-summarize/run.js";
 import { resolveSelection } from "../config/resolve-selection.js";
@@ -38,6 +40,11 @@ export function registerCompactionHooks(pi: ExtensionAPI): void {
     }
 
     try {
+      const requestLog = beginRequestLog();
+      const logger = requestLog
+        ? createCompactWorkflowLogger(requestLog)
+        : undefined;
+
       const compaction = await runPiCompact({
         strategyId,
         preparation,
@@ -48,6 +55,7 @@ export function registerCompactionHooks(pi: ExtensionAPI): void {
         signal,
         compactionModel: selection.logicalName,
         getDriver: getDriverForLogicalModel,
+        logger,
       });
 
       if (signal.aborted) {
