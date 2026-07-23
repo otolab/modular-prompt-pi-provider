@@ -107,7 +107,7 @@ mergeQueryOptions(
 |---|---|---|
 | 1 | 型・正規化・名前解決・driver レジストリ・ドキュメント | 完了 |
 | 2 | passthrough workflow + stream 配線 | 完了 |
-| 3 | virtualModel + agentic workflow | 本 PR |
+| 3 | virtualModel + agentic workflow | 完了 |
 
 ## 関連ファイル
 
