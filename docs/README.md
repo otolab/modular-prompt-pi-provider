@@ -11,6 +11,7 @@
 | 3 | [pi-apis.md](./pi-apis.md) | Pi 拡張 API（`streamSimple` 以外のイベント含む） |
 | 4 | [configuration.md](./configuration.md) | 設定ファイル配置・Pi 設定との役割分担 |
 | 5 | [modular-prompt-apis.md](./modular-prompt-apis.md) | 消費する `@modular-prompt/driver` API |
+| 5b | [modular-prompt-structure.md](./modular-prompt-structure.md) | modular-prompt 全体構造（core / process / compact 向け） |
 | 6 | [adapter.md](./adapter.md) | 型変換・`CompiledPrompt` 組み立て |
 | 7 | [streaming.md](./streaming.md) | 生ストリーム → Pi イベント（増分パーサ） |
 | 8 | [abort-spec.md](./abort-spec.md) | AbortSignal 要求仕様 |

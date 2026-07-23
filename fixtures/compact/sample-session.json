@@ -1,0 +1,10 @@
+{
+  "chunks": [
+    {
+      "content": "user: Add a compact mechanism for Pi sessions\nassistant: Created src/compact/ with strategy registry and stream-summarize strategy using streamProcess.\nuser: Wire session_before_compact next\nassistant: Added adapters/pi-hook.ts and hooks/compaction.ts with processes.compaction config.",
+      "partOf": "session",
+      "usage": 80
+    }
+  ],
+  "targetTokens": 512
+}

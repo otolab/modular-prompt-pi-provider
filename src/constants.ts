@@ -1,6 +1,9 @@
-/** コードデフォルト物理モデル（優先度最低） */
+/** コードデフォルト物理モデル（優先度最低）。text LM・KV キャッシュ対応 */
 export const DEFAULT_MODEL_FALLBACK =
-  "mlx-community/gemma-4-26B-A4B-it-heretic-4bit";
+  "prism-ml/Ternary-Bonsai-1.7B-mlx-2bit";
+
+/** インテグレーション / experimental のデフォルト物理モデル（{@link DEFAULT_MODEL_FALLBACK} と同一） */
+export const INTEGRATION_MLX_MODEL_DEFAULT = DEFAULT_MODEL_FALLBACK;
 
 export const PROVIDER_ID = "modular-prompt-provider";
 export const API_ID = "modular-prompt-provider";

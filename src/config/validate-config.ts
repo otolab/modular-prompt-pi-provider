@@ -1,3 +1,4 @@
+import { resolveCompactStrategy } from "../compact/registry.js";
 import { resolveSelection } from "./resolve-selection.js";
 import type { LogicalModelDefinition, ResolvedProviderConfig } from "./types.js";
 
@@ -105,9 +106,18 @@ function validateModelSets(config: ResolvedProviderConfig): void {
   }
 }
 
+function validateCompact(config: ResolvedProviderConfig): void {
+  const strategy = config.compact?.strategy;
+  if (!strategy) {
+    return;
+  }
+  resolveCompactStrategy(strategy);
+}
+
 /** 正規化済み config の簡易バリデーション（ロード時に fail-fast） */
 export function validateProviderConfig(config: ResolvedProviderConfig): void {
   validateProcesses(config);
   validateWorkflows(config);
   validateModelSets(config);
+  validateCompact(config);
 }

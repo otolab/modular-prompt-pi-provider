@@ -97,6 +97,12 @@ export interface PiProviderYamlConfig {
     }
   >;
   processes?: Record<string, { model: string }>;
+  compact?: {
+    strategy?: string;
+    targetTokens?: number;
+    tokenLimit?: number;
+    maxChunk?: number;
+  };
   cache?: {
     maxAgeDays?: number;
     maxSizeGb?: number;

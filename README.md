@@ -42,6 +42,7 @@ npm install
 npm run typecheck
 npm run test:run          # ユニットテスト（MLX 非起動・逐次実行）
 npm run test:integration  # MLX 実機インテグレーション（未導入・非対応時は skip）
+npm run compact:experimental -- --strategy stream-summarize --driver test  # 手動 compact 検証
 npm run test:all          # 両方
 ```
 

@@ -118,10 +118,32 @@ pi.on("context", async (event, ctx) => {
 });
 ```
 
-## 関連ファイル（予定）
+## 関連ファイル
 
 | ファイル | 内容 |
 |---|---|
-| `src/hooks/overflow-rewrite.ts` | `message_end` 登録 |
+| `src/compact/` | 汎用 Compact 機構（[#58](https://github.com/otolab/modular-prompt-pi-provider/issues/58)） |
+| `src/compact/strategies/stream-summarize/` | デフォルト strategy（`streamProcess`） |
+| `src/compact/strategies/summarize-process/` | 2 段要約 strategy（`summarizeProcess`） |
 | `src/hooks/compaction.ts` | `session_before_compact` 登録 |
-| `src/prompts/compaction.ts` | 要約 Prompt テンプレート |
+| `fixtures/compact/` | experimental / 手動検証用フィクスチャ |
+| `tests/integration/compact.test.ts` | MLX 実機 compact インテグレーション |
+
+### 検証コマンド
+
+```bash
+# ユニット（TestDriver）
+npm run test:run -- test/compact.test.ts
+
+# MLX 実機（未導入時は skip）
+npm run test:integration -- tests/integration/compact.test.ts
+
+# 手動 experimental（TestDriver または MLX）
+npm run compact:experimental -- --strategy stream-summarize --driver test
+npm run compact:experimental -- --strategy summarize-process --driver mlx
+
+# integration は stream-summarize / summarize-process を逐次実行（fileParallelism: false）
+npm run test:integration -- tests/integration/compact.test.ts
+```
+
+設計の背景: [modular-prompt-structure.md](./modular-prompt-structure.md)（`streamProcess` ベース）

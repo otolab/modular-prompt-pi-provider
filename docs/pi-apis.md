@@ -34,7 +34,7 @@ pi.registerProvider("modular-prompt-provider", {
   baseUrl: "local://modular-prompt-provider",  // Pi 必須。streamSimple では未使用
   apiKey: "local",                        // Pi 必須。streamSimple では未使用
   api: "modular-prompt-provider",
-  streamSimple: streamModularPromptMlx,
+  streamSimple: streamModularPrompt,
   models: ProviderModelConfig[],
 });
 ```
@@ -57,7 +57,7 @@ pi.registerProvider("modular-prompt-provider", {
 ## `streamSimple` 契約
 
 ```typescript
-function streamModularPromptMlx(
+function streamModularPrompt(
   model: Model<"modular-prompt-provider">,
   context: Context,
   options?: SimpleStreamOptions,

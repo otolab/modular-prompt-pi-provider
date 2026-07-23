@@ -6,7 +6,7 @@ import { API_ID, PROVIDER_ID } from "../src/constants.js";
 import { getActiveStreamSessionId, resetActiveStreamSessionId } from "../src/cache/session-context.js";
 import { getDriverForLogicalModel } from "../src/driver/pool.js";
 import { getResolvedProviderConfig } from "../src/driver/service.js";
-import { streamModularPromptMlx } from "../src/stream-simple.js";
+import { streamModularPrompt } from "../src/stream-simple.js";
 import { createResolvedProviderConfig } from "../src/config.js";
 
 vi.mock("../src/driver/pool.js", () => ({
@@ -66,7 +66,7 @@ function indexOfEvent(events: AssistantMessageEvent[], type: AssistantMessageEve
   return events.findIndex((event) => event.type === type);
 }
 
-async function collectStream(stream: ReturnType<typeof streamModularPromptMlx>) {
+async function collectStream(stream: ReturnType<typeof streamModularPrompt>) {
   const events: AssistantMessageEvent[] = [];
   for await (const event of stream) {
     events.push(event);
@@ -75,7 +75,7 @@ async function collectStream(stream: ReturnType<typeof streamModularPromptMlx>) 
   return { events, message };
 }
 
-describe("streamModularPromptMlx (TestDriver)", () => {
+describe("streamModularPrompt (TestDriver)", () => {
   beforeEach(() => {
     vi.mocked(getDriverForLogicalModel).mockReset();
     vi.mocked(getResolvedProviderConfig).mockReturnValue(mockResolvedConfig());
@@ -87,7 +87,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
       new TestDriver({ responses: ["1 2 3"] }),
     );
 
-    const stream = streamModularPromptMlx(model, baseContext());
+    const stream = streamModularPrompt(model, baseContext());
     const { events, message } = await collectStream(stream);
 
     expect(getDriverForLogicalModel).toHaveBeenCalledWith("test-model");
@@ -126,7 +126,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     vi.mocked(getDriverForLogicalModel).mockResolvedValue(new TestDriver({ responses: [] }));
 
     const { events, message } = await collectStream(
-      streamModularPromptMlx(model, baseContext()),
+      streamModularPrompt(model, baseContext()),
     );
 
     expect(events[0]?.type).toBe("start");
@@ -155,7 +155,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     );
 
     const { events, message } = await collectStream(
-      streamModularPromptMlx(model, baseContext()),
+      streamModularPrompt(model, baseContext()),
     );
 
     const textEnd = indexOfEvent(events, "text_end");
@@ -186,7 +186,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     );
 
     const { message } = await collectStream(
-      streamModularPromptMlx(model, baseContext(), {
+      streamModularPrompt(model, baseContext(), {
         sessionId: "pi-session-1",
         cacheRetention: "short",
       }),
@@ -209,7 +209,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
     );
 
     await collectStream(
-      streamModularPromptMlx(model, baseContext(), {
+      streamModularPrompt(model, baseContext(), {
         cacheRetention: "none",
       }),
     );
@@ -245,7 +245,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
 
     const virtualModel = { ...model, id: "virtual-chat" };
     const { events, message } = await collectStream(
-      streamModularPromptMlx(virtualModel, baseContext()),
+      streamModularPrompt(virtualModel, baseContext()),
     );
 
     expect(getDriverForLogicalModel).toHaveBeenCalledWith("gemma");
@@ -274,7 +274,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
 
     const unknownModel = { ...model, id: "unknown-id" };
     const { events, message } = await collectStream(
-      streamModularPromptMlx(unknownModel, baseContext()),
+      streamModularPrompt(unknownModel, baseContext()),
     );
 
     expect(getDriverForLogicalModel).toHaveBeenCalledWith("fallback");
@@ -300,7 +300,7 @@ describe("streamModularPromptMlx (TestDriver)", () => {
 
     const unknownModel = { ...model, id: "unknown-id" };
     const { message } = await collectStream(
-      streamModularPromptMlx(unknownModel, baseContext()),
+      streamModularPrompt(unknownModel, baseContext()),
     );
 
     expect(message.errorMessage).toContain("unknown-id");

@@ -63,6 +63,14 @@ export interface ProcessDefinition {
 
 export type ProcessesConfig = Record<string, ProcessDefinition>;
 
+/** YAML `compact.*` — Pi session_before_compact 向け strategy 設定 */
+export interface CompactConfig {
+  strategy?: string;
+  targetTokens?: number;
+  tokenLimit?: number;
+  maxChunk?: number;
+}
+
 /** 正規化済み論理モデル */
 export interface ResolvedLogicalModel {
   logicalName: string;
@@ -87,6 +95,7 @@ export interface ResolvedProviderConfig {
   modelSets: ModelSetsConfig;
   workflows: WorkflowConfig;
   processes: ProcessesConfig;
+  compact?: CompactConfig;
   virtualModels: Map<string, ResolvedVirtualModel>;
   defaultLogicalModel: string;
   applicationConfig: ApplicationConfig;
