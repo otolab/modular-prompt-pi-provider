@@ -26,7 +26,7 @@ const COMPACT_CHUNKS = [
 
 const INTEGRATION_STRATEGIES = ["stream-summarize", "summarize-process"] as const;
 
-describe.skipIf(!probe.runtimeAvailable)("MLX compact", () => {
+describe.skipIf(!probe.runtimeAvailable)("MLX compact engine", () => {
   const modelId = probe.modelId!;
   let cacheDir: string;
 
