@@ -37,6 +37,11 @@ workflow:
 processes:
   default:
     model: gemma-4-ja
+  compaction:
+    model: gemma-4-ja
+
+compact:
+  strategy: stream-summarize
 
 cache:
   maxAgeDays: 7

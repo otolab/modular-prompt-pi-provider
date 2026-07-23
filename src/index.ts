@@ -6,6 +6,7 @@ import { discoverApplicationConfig } from "./driver/discovery.js";
 import { initResolvedProviderConfig } from "./driver/service.js";
 import { runCacheSweepOnStartup } from "./cache/runtime.js";
 import { registerCacheCommands } from "./hooks/cache-commands.js";
+import { registerCompactionHooks } from "./hooks/compaction.js";
 import { registerSessionHooks } from "./hooks/session.js";
 import { loadPiProviderConfig } from "./pi-provider-config.js";
 import { streamModularPromptMlx } from "./stream-simple.js";
@@ -26,6 +27,7 @@ function registerMlxProvider(pi: ExtensionAPI, resolvedConfig: ResolvedProviderC
 
 export default async function (pi: ExtensionAPI): Promise<void> {
   registerSessionHooks(pi);
+  registerCompactionHooks(pi);
   registerCacheCommands(pi);
 
   const loadAndRegister = async (

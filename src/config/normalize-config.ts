@@ -257,6 +257,7 @@ export function normalizeProviderConfig(
   const modelSets = yaml.modelSets ?? {};
   const workflows = yaml.workflow ?? {};
   const processes = yaml.processes ?? {};
+  const compact = yaml.compact;
   const virtualModels = extractVirtualModels(workflows);
   const defaultLogicalModel = resolveDefaultLogicalModel(logicalModels);
 
@@ -275,6 +276,7 @@ export function normalizeProviderConfig(
     modelSets,
     workflows,
     processes,
+    compact,
     virtualModels,
     defaultLogicalModel,
     applicationConfig,
