@@ -3,6 +3,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { runPiCompact } from "../src/compact/adapters/pi-hook.js";
 import { initResolvedProviderConfig } from "../src/driver/service.js";
 import { registerCompactionHooks } from "../src/hooks/compaction.js";
+import { beginRequestLog } from "../src/logging/runtime.js";
 
 vi.mock("../src/compact/adapters/pi-hook.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/compact/adapters/pi-hook.js")>();
@@ -12,9 +13,18 @@ vi.mock("../src/compact/adapters/pi-hook.js", async (importOriginal) => {
   };
 });
 
+vi.mock("../src/logging/runtime.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/logging/runtime.js")>();
+  return {
+    ...actual,
+    beginRequestLog: vi.fn(),
+  };
+});
+
 describe("registerCompactionHooks", () => {
   beforeEach(() => {
     vi.mocked(runPiCompact).mockReset();
+    vi.mocked(beginRequestLog).mockReset();
   });
 
   it("processes.compaction 未設定時は何もしない", async () => {
@@ -166,5 +176,115 @@ describe("registerCompactionHooks", () => {
       expect.stringContaining("stream-summarize"),
       "info",
     );
+  });
+
+  it("session_compact で processes.compaction 設定時にメトリクスを記録する", async () => {
+    initResolvedProviderConfig({
+      models: {
+        "compact-model": {
+          provider: "mlx",
+          model: "mlx-community/test",
+          defaultQueryOptions: { maxTokens: 1024 },
+        },
+      },
+      processes: {
+        compaction: { model: "compact-model" },
+      },
+    });
+
+    const logOut = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(beginRequestLog).mockReturnValue({
+      logOut,
+    } as never);
+
+    const handlers = new Map<string, (...args: unknown[]) => unknown>();
+    const pi = {
+      on: vi.fn((event: string, handler: (...args: unknown[]) => unknown) => {
+        handlers.set(event, handler);
+      }),
+    } as unknown as ExtensionAPI;
+
+    registerCompactionHooks(pi);
+
+    const handler = handlers.get("session_compact");
+    expect(handler).toBeDefined();
+
+    await handler!(
+      {
+        type: "session_compact",
+        reason: "threshold",
+        willRetry: false,
+        fromExtension: true,
+        compactionEntry: {
+          type: "compaction",
+          id: "cmp-1",
+          parentId: null,
+          timestamp: 1,
+          summary: "summary text",
+          firstKeptEntryId: "keep-1",
+          tokensBefore: 5000,
+          fromHook: true,
+        },
+      },
+      {},
+    );
+
+    expect(logOut).toHaveBeenCalledWith("compact_complete", {
+      reason: "threshold",
+      willRetry: false,
+      fromExtension: true,
+      tokensBefore: 5000,
+      summaryLength: 12,
+      firstKeptEntryId: "keep-1",
+      fromHook: true,
+    });
+  });
+
+  it("session_compact は processes.compaction 未設定時はログしない", async () => {
+    initResolvedProviderConfig({
+      models: {
+        default: {
+          provider: "mlx",
+          model: "mlx-community/test",
+          defaultQueryOptions: { maxTokens: 1024 },
+        },
+      },
+    });
+
+    const logOut = vi.fn();
+    vi.mocked(beginRequestLog).mockReturnValue({
+      logOut,
+    } as never);
+
+    const handlers = new Map<string, (...args: unknown[]) => unknown>();
+    const pi = {
+      on: vi.fn((event: string, handler: (...args: unknown[]) => unknown) => {
+        handlers.set(event, handler);
+      }),
+    } as unknown as ExtensionAPI;
+
+    registerCompactionHooks(pi);
+
+    const handler = handlers.get("session_compact");
+    await handler!(
+      {
+        type: "session_compact",
+        reason: "manual",
+        willRetry: false,
+        fromExtension: false,
+        compactionEntry: {
+          type: "compaction",
+          id: "cmp-1",
+          parentId: null,
+          timestamp: 1,
+          summary: "pi default",
+          firstKeptEntryId: "keep-1",
+          tokensBefore: 100,
+        },
+      },
+      {},
+    );
+
+    expect(beginRequestLog).not.toHaveBeenCalled();
   });
 });

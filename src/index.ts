@@ -26,7 +26,6 @@ function registerMlxProvider(pi: ExtensionAPI, resolvedConfig: ResolvedProviderC
 }
 
 export default async function (pi: ExtensionAPI): Promise<void> {
-  registerSessionHooks(pi);
   registerCompactionHooks(pi);
   registerCacheCommands(pi);
 
@@ -45,9 +44,7 @@ export default async function (pi: ExtensionAPI): Promise<void> {
     return resolvedConfig.applicationConfig;
   };
 
-  await loadAndRegister(process.cwd(), false);
+  registerSessionHooks(pi, { onSessionStart: loadAndRegister });
 
-  pi.on("session_start", async (_event, ctx) => {
-    await loadAndRegister(ctx.cwd, ctx.isProjectTrusted());
-  });
+  await loadAndRegister(process.cwd(), false);
 }
