@@ -1,14 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { AIService, TestDriver, type DriverCapability } from "@modular-prompt/driver";
+import { INTEGRATION_MLX_MODEL_DEFAULT } from "../../constants.js";
 import {
   listCompactStrategyIds,
   runCompact,
   type CompactInput,
 } from "../index.js";
-
-const INTEGRATION_MLX_MODEL_DEFAULT =
-  "prism-ml/Ternary-Bonsai-1.7B-mlx-2bit";
 
 const MLX_CAPABILITIES: DriverCapability[] = [
   "streaming",

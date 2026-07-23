@@ -18,7 +18,7 @@ modular-prompt-pi-provider/
     index.ts                 # ExtensionAPI エントリ ✅
     constants.ts             # PROVIDER_ID, API_ID ✅
     config.ts                # ApplicationConfig / デフォルトモデル ✅
-    stream-simple.ts         # streamModularPromptMlx ✅
+    stream-simple.ts         # streamModularPrompt ✅
     adapter/
       context-to-prompt.ts   ✅
       message-mapper.ts      ✅
@@ -142,7 +142,7 @@ modular-prompt-pi-provider/
 | スキップ | `SKIP_INTEGRATION=1`、または MLX 未導入・VLM 等でプローブ失敗時 |
 | 主なテスト | `tests/integration/cache-hit.test.ts`（KV キャッシュ）、`tests/integration/compact.test.ts`（compact 要約） |
 
-アプリのコードデフォルト（Gemma 4 VLM）は KV キャッシュ非対応のため、インテグレーションでは **`MODULAR_PROMPT_PI_MODEL` にフォールバックしない**。
+アプリのコードデフォルトも [`prism-ml/Ternary-Bonsai-1.7B-mlx-2bit`](https://huggingface.co/prism-ml/Ternary-Bonsai-1.7B-mlx-2bit)（text LM・KV キャッシュ対応）。インテグレーションは **`MODULAR_PROMPT_PI_MODEL` にフォールバックしない**（`INTEGRATION_MLX_MODEL` で上書き）。
 
 ### Pi 公式（`@earendil-works/pi-ai`）
 

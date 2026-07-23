@@ -11,7 +11,7 @@ Pi の `Context` と modular-prompt の `CompiledPrompt` / `QueryOptions` の橋
 | `tools.ts` | `piToolsToToolDefinitions(tools)` |
 | `options.ts` | `piOptionsToQueryOptions(options, model)` |
 | `usage.ts` | `mapQueryResultUsageToPi(result, model)` |
-| `stream-bridge.ts` | `bridgeMlxStreamToPi(...)` |
+| `stream-bridge.ts` | `bridgeDriverStreamToPi(...)` |
 | `finish-reason.ts` | `mapFinishReason(...)` |
 
 ## `Context` → `CompiledPrompt`

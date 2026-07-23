@@ -2,7 +2,7 @@ import type { Api, Context, Model, SimpleStreamOptions } from "@earendil-works/p
 import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
 import { bridgeDriverStreamToPi } from "./adapter/stream-bridge.js";
 
-export function streamModularPromptMlx(
+export function streamModularPrompt(
   model: Model<Api>,
   context: Context,
   options?: SimpleStreamOptions,

@@ -24,6 +24,8 @@ const COMPACT_CHUNKS = [
   },
 ];
 
+const INTEGRATION_STRATEGIES = ["stream-summarize", "summarize-process"] as const;
+
 describe.skipIf(!probe.runtimeAvailable)("MLX compact", () => {
   const modelId = probe.modelId!;
   let cacheDir: string;
@@ -53,7 +55,7 @@ describe.skipIf(!probe.runtimeAvailable)("MLX compact", () => {
     await rm(cacheDir, { recursive: true, force: true });
   });
 
-  for (const strategyId of ["stream-summarize"] as const) {
+  for (const strategyId of INTEGRATION_STRATEGIES) {
     it(`${strategyId} で要約を生成する`, async () => {
       expect(listCompactStrategyIds()).toContain(strategyId);
 
@@ -72,7 +74,10 @@ describe.skipIf(!probe.runtimeAvailable)("MLX compact", () => {
         const result = await runCompact(
           strategyId,
           { chunks: COMPACT_CHUNKS, targetTokens: 256 },
-          { driver },
+          {
+            driver,
+            enableAnalysis: strategyId === "summarize-process" ? false : undefined,
+          },
         );
 
         expect(result.summary.trim().length).toBeGreaterThan(20);
@@ -82,38 +87,4 @@ describe.skipIf(!probe.runtimeAvailable)("MLX compact", () => {
       }
     });
   }
-
-  const runAllStrategies = process.env.COMPACT_INTEGRATION_ALL_STRATEGIES === "1";
-  const optionalStrategies = listCompactStrategyIds().filter(
-    (id) => id !== "stream-summarize",
-  );
-
-  describe.skipIf(!runAllStrategies)("optional strategies", () => {
-    for (const strategyId of optionalStrategies) {
-      it(`${strategyId} で要約を生成する`, async () => {
-        const spec = {
-          model: modelId,
-          provider: "mlx" as const,
-          capabilities: INTEGRATION_DRIVER_CAPABILITIES,
-          maxOutputTokens: 256,
-          driverOptions: { cacheDir },
-          defaultOptions: { maxTokens: 128, temperature: 0 },
-        };
-        const service = new AIService({ models: [spec] });
-        const driver = await service.createDriver(spec);
-
-        try {
-          const result = await runCompact(
-            strategyId,
-            { chunks: COMPACT_CHUNKS, targetTokens: 256 },
-            { driver, enableAnalysis: false },
-          );
-
-          expect(result.summary.trim().length).toBeGreaterThan(20);
-        } finally {
-          await driver.close();
-        }
-      });
-    }
-  });
 });

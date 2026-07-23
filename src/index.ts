@@ -9,7 +9,7 @@ import { registerCacheCommands } from "./hooks/cache-commands.js";
 import { registerCompactionHooks } from "./hooks/compaction.js";
 import { registerSessionHooks } from "./hooks/session.js";
 import { loadPiProviderConfig } from "./pi-provider-config.js";
-import { streamModularPromptMlx } from "./stream-simple.js";
+import { streamModularPrompt } from "./stream-simple.js";
 import type { ResolvedProviderConfig } from "./config/types.js";
 
 function registerMlxProvider(pi: ExtensionAPI, resolvedConfig: ResolvedProviderConfig): void {
@@ -21,7 +21,7 @@ function registerMlxProvider(pi: ExtensionAPI, resolvedConfig: ResolvedProviderC
     apiKey: PROVIDER_API_KEY,
     api: API_ID,
     models,
-    streamSimple: streamModularPromptMlx,
+    streamSimple: streamModularPrompt,
   });
 }
 

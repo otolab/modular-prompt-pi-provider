@@ -142,8 +142,8 @@ npm run test:integration -- tests/integration/compact.test.ts
 npm run compact:experimental -- --strategy stream-summarize --driver test
 npm run compact:experimental -- --strategy summarize-process --driver mlx
 
-# 全 strategy を実機で（時間がかかる）
-COMPACT_INTEGRATION_ALL_STRATEGIES=1 npm run test:integration -- tests/integration/compact.test.ts
+# integration は stream-summarize / summarize-process を逐次実行（fileParallelism: false）
+npm run test:integration -- tests/integration/compact.test.ts
 ```
 
 設計の背景: [modular-prompt-structure.md](./modular-prompt-structure.md)（`streamProcess` ベース）

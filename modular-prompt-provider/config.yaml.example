@@ -12,20 +12,20 @@ providers:
 models:
   default:
     provider: mlx
-    model: mlx-community/gemma-4-26B-A4B-it-heretic-4bit
+    model: prism-ml/Ternary-Bonsai-1.7B-mlx-2bit
     defaultQueryOptions:
       maxTokens: 8192
       temperature: 0.7
 
-  gemma-4-ja:
+  bonsai:
     provider: mlx
-    model: mlx-community/gemma-4-26B-A4B-it-heretic-4bit
+    model: prism-ml/Ternary-Bonsai-1.7B-mlx-2bit
     defaultQueryOptions:
       maxTokens: 8192
 
 modelSets:
   default:
-    chat: gemma-4-ja
+    chat: bonsai
     default: default
 
 workflow:
@@ -36,9 +36,9 @@ workflow:
 
 processes:
   default:
-    model: gemma-4-ja
+    model: bonsai
   compaction:
-    model: gemma-4-ja
+    model: bonsai
 
 compact:
   strategy: stream-summarize
