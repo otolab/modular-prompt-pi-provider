@@ -76,7 +76,7 @@ modular-prompt-pi-provider/
     adapter/
       incremental-parser.ts  # P2
     hooks/
-      overflow-rewrite.ts    # P2
+      overflow-rewrite.ts    # ✅ #23
       compaction.ts          # P1（#56 フォローアップ）
     prompts/
       compaction.ts          # P1
@@ -179,7 +179,7 @@ modular-prompt-pi-provider/
 | `test/agentic-logging.test.ts` | agentic ログ抽出 | ✅ |
 | `test/validate-config.test.ts` | config 簡易バリデーション | ✅ |
 | `test/resolve-selection.test.ts` | model.id 解決 | ✅ |
-| `test/stream-events.test.ts` | ストリーム契約（TestDriver） | ✅ |
+| `test/overflow-rewrite.test.ts` | MLX overflow リライト（#23） | ✅ |
 | `tests/integration/workflow-stream.test.ts` | MLX workflow stream（#56） | ✅ |
 | `tests/integration/cache-hit.test.ts` | MLX KV キャッシュ（実機） | ✅ |
 | `tests/integration/compact-engine.test.ts` | MLX compact 要約（実機） | ✅ |

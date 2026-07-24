@@ -125,7 +125,8 @@ pi.on("context", async (event, ctx) => {
 | `src/compact/` | 汎用 Compact 機構（[#58](https://github.com/otolab/modular-prompt-pi-provider/issues/58)） |
 | `src/compact/strategies/stream-summarize/` | デフォルト strategy（`streamProcess`） |
 | `src/compact/strategies/summarize-process/` | 2 段要約 strategy（`summarizeProcess`） |
-| `src/hooks/compaction.ts` | `session_before_compact` 登録 |
+| `src/hooks/compaction.ts` | `session_before_compact` / `session_compact` 登録 |
+| `src/hooks/overflow-rewrite.ts` | `message_end` overflow リライト（#23） |
 | `fixtures/compact/` | experimental / 手動検証用フィクスチャ |
 | `tests/integration/compact-engine.test.ts` | MLX 実機 compact エンジン smoke |
 

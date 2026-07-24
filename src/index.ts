@@ -7,6 +7,7 @@ import { initResolvedProviderConfig } from "./driver/service.js";
 import { runCacheSweepOnStartup } from "./cache/runtime.js";
 import { registerCacheCommands } from "./hooks/cache-commands.js";
 import { registerCompactionHooks } from "./hooks/compaction.js";
+import { registerOverflowRewriteHooks } from "./hooks/overflow-rewrite.js";
 import { registerSessionHooks } from "./hooks/session.js";
 import { loadPiProviderConfig } from "./pi-provider-config.js";
 import { streamModularPrompt } from "./stream-simple.js";
@@ -26,6 +27,7 @@ function registerMlxProvider(pi: ExtensionAPI, resolvedConfig: ResolvedProviderC
 }
 
 export default async function (pi: ExtensionAPI): Promise<void> {
+  registerOverflowRewriteHooks(pi);
   registerCompactionHooks(pi);
   registerCacheCommands(pi);
 

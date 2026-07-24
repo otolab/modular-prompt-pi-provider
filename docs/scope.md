@@ -37,7 +37,7 @@ driver は `QueryOptions.signal`、`result.usage`（`cacheReadTokens` / `cacheWr
 | **P1** | `session_shutdown` → `close()` | プロセスリークなし | — |
 | **P1** | `session_before_compact` + Prompt | 手動 `/compact` | — |
 | **P2** | 増分パーサ | `thinking_*` リアルタイム。タグが UI に漏れない | — |
-| **P2** | `message_end` overflow リライト | overflow 後の自動リトライ | — |
+| **P2** | `message_end` overflow リライト | unit + Pi `context-overflow`（#35） | ✅ unit |
 | **P3** | `context` 剪定 | トークン節約 | — |
 
 ## 責務の境界
