@@ -44,7 +44,11 @@ export default async function (pi: ExtensionAPI): Promise<void> {
     return resolvedConfig.applicationConfig;
   };
 
-  registerSessionHooks(pi, { onSessionStart: loadAndRegister });
+  registerSessionHooks(pi, {
+    onSessionStart: async (cwd, isProjectTrusted) => {
+      await loadAndRegister(cwd, isProjectTrusted);
+    },
+  });
 
   await loadAndRegister(process.cwd(), false);
 }
