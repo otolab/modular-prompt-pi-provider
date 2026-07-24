@@ -8,7 +8,43 @@ import { resolveSelection } from "../config/resolve-selection.js";
 import { getDriverForLogicalModel } from "../driver/model-registry.js";
 import { getResolvedProviderConfig } from "../driver/service.js";
 
+function logSessionCompact(event: {
+  reason: "manual" | "threshold" | "overflow";
+  willRetry: boolean;
+  fromExtension: boolean;
+  compactionEntry: {
+    summary: string;
+    firstKeptEntryId: string;
+    tokensBefore: number;
+    fromHook?: boolean;
+  };
+}): void {
+  const requestLog = beginRequestLog();
+  if (!requestLog) {
+    return;
+  }
+
+  void requestLog.logOut("compact_complete", {
+    reason: event.reason,
+    willRetry: event.willRetry,
+    fromExtension: event.fromExtension,
+    tokensBefore: event.compactionEntry.tokensBefore,
+    summaryLength: event.compactionEntry.summary.length,
+    firstKeptEntryId: event.compactionEntry.firstKeptEntryId,
+    fromHook: event.compactionEntry.fromHook,
+  });
+}
+
 export function registerCompactionHooks(pi: ExtensionAPI): void {
+  pi.on("session_compact", async (event) => {
+    const config = getResolvedProviderConfig();
+    if (!config.processes.compaction?.model) {
+      return;
+    }
+
+    logSessionCompact(event);
+  });
+
   pi.on("session_before_compact", async (event, ctx) => {
     const config = getResolvedProviderConfig();
     const compactionModel = config.processes.compaction?.model;

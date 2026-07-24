@@ -127,7 +127,7 @@ pi.on("context", async (event, ctx) => {
 | `src/compact/strategies/summarize-process/` | 2 段要約 strategy（`summarizeProcess`） |
 | `src/hooks/compaction.ts` | `session_before_compact` 登録 |
 | `fixtures/compact/` | experimental / 手動検証用フィクスチャ |
-| `tests/integration/compact.test.ts` | MLX 実機 compact インテグレーション |
+| `tests/integration/compact-engine.test.ts` | MLX 実機 compact エンジン smoke |
 
 ### 検証コマンド
 
@@ -136,14 +136,14 @@ pi.on("context", async (event, ctx) => {
 npm run test:run -- test/compact.test.ts
 
 # MLX 実機（未導入時は skip）
-npm run test:integration -- tests/integration/compact.test.ts
+npm run test:integration -- tests/integration/compact-engine.test.ts
 
 # 手動 experimental（TestDriver または MLX）
 npm run compact:experimental -- --strategy stream-summarize --driver test
 npm run compact:experimental -- --strategy summarize-process --driver mlx
 
 # integration は stream-summarize / summarize-process を逐次実行（fileParallelism: false）
-npm run test:integration -- tests/integration/compact.test.ts
+npm run test:integration -- tests/integration/compact-engine.test.ts
 ```
 
 設計の背景: [modular-prompt-structure.md](./modular-prompt-structure.md)（`streamProcess` ベース）
