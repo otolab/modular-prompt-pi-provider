@@ -134,7 +134,21 @@ export function appendTextBlock(output: AssistantMessage, text: string): number 
   return output.content.length - 1;
 }
 
+export function appendThinkingBlock(output: AssistantMessage, thinking: string): number {
+  const block: ThinkingContent = { type: "thinking", thinking };
+  output.content.push(block);
+  return output.content.length - 1;
+}
+
 export function getTextBlock(output: AssistantMessage, index: number): TextContent | undefined {
   const block = output.content[index];
   return block?.type === "text" ? block : undefined;
+}
+
+export function getThinkingBlock(
+  output: AssistantMessage,
+  index: number,
+): ThinkingContent | undefined {
+  const block = output.content[index];
+  return block?.type === "thinking" ? block : undefined;
 }

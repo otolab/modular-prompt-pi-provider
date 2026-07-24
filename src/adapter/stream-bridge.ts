@@ -24,11 +24,10 @@ import { beginRequestLog } from "../logging/runtime.js";
 import { createAgenticRequestLogger } from "../logging/agentic-logger.js";
 import { piContextToCompiledPrompt } from "./context-to-prompt.js";
 import { resolveStreamTermination } from "./finish-reason.js";
-import {
-  appendTextBlock,
-  createInitialAssistantMessage,
-  getTextBlock,
-} from "./message-mapper.js";
+import { IncrementalThinkingParser } from "./incremental-parser.js";
+import { StreamContentEmitter } from "./stream-content-emitter.js";
+import { getDriverThinkingMarkers } from "./thinking-markers.js";
+import { createInitialAssistantMessage, appendTextBlock, getTextBlock } from "./message-mapper.js";
 import { mergeQueryOptions, piOptionsToQueryOptions } from "./options.js";
 import { emitToolCallsFromResult } from "./toolcall-emitter.js";
 import { piToolsToToolDefinitions } from "./tools.js";
@@ -63,6 +62,7 @@ async function emitQueryResultToPi(params: {
   requestLog: ReturnType<typeof beginRequestLog>;
   driverForCacheStats?: AIDriver;
   skipResponseLogging?: boolean;
+  streamContent?: StreamContentEmitter;
 }): Promise<void> {
   const {
     final,
@@ -74,6 +74,7 @@ async function emitQueryResultToPi(params: {
     requestLog,
     driverForCacheStats,
     skipResponseLogging,
+    streamContent,
   } = params;
 
   output.usage = mapQueryResultUsageToPi(final, model);
@@ -93,18 +94,10 @@ async function emitQueryResultToPi(params: {
     }
   }
 
-  const cleanedText = final.content ?? "";
-  const textIndex = output.content.findIndex((block) => block.type === "text");
-  const resolvedTextIndex = textIndex >= 0 ? textIndex : appendTextBlock(output, "");
-  const textBlock = getTextBlock(output, resolvedTextIndex);
-  if (textBlock) {
-    textBlock.text = cleanedText;
-    piStream.push({
-      type: "text_end",
-      contentIndex: resolvedTextIndex,
-      content: cleanedText,
-      partial: output,
-    });
+  if (streamContent) {
+    streamContent.finalizeFromResult(final.content ?? "", final.thinkingContent);
+  } else {
+    finalizePlainTextContent(final.content ?? "", output, piStream);
   }
 
   if (final.toolCalls?.length) {
@@ -138,6 +131,25 @@ async function emitQueryResultToPi(params: {
     });
   }
   piStream.end();
+}
+
+function finalizePlainTextContent(
+  cleanedText: string,
+  output: AssistantMessage,
+  piStream: AssistantMessageEventStream,
+): void {
+  const textIndex = output.content.findIndex((block) => block.type === "text");
+  const resolvedTextIndex = textIndex >= 0 ? textIndex : appendTextBlock(output, "");
+  const textBlock = getTextBlock(output, resolvedTextIndex);
+  if (textBlock) {
+    textBlock.text = cleanedText;
+    piStream.push({
+      type: "text_end",
+      contentIndex: resolvedTextIndex,
+      content: cleanedText,
+      partial: output,
+    });
+  }
 }
 
 export async function bridgeDriverStreamToPi(
@@ -269,23 +281,20 @@ export async function bridgeDriverStreamToPi(
             workflowRequest,
           );
 
-    const textIndex = appendTextBlock(output, "");
-    piStream.push({ type: "text_start", contentIndex: textIndex, partial: output });
+    const thinkingMarkers = await getDriverThinkingMarkers(driver);
+    const parser = new IncrementalThinkingParser(thinkingMarkers);
+    const streamContent = new StreamContentEmitter(output, piStream);
 
     for await (const chunk of stream) {
       if (isAborted(options?.signal)) {
         break;
       }
-      const block = getTextBlock(output, textIndex);
-      if (block) {
-        block.text += chunk;
-        piStream.push({
-          type: "text_delta",
-          contentIndex: textIndex,
-          delta: chunk,
-          partial: output,
-        });
+      for (const segment of parser.feed(chunk)) {
+        streamContent.handle(segment);
       }
+    }
+    for (const segment of parser.flush()) {
+      streamContent.handle(segment);
     }
 
     const final = await result;
@@ -298,6 +307,7 @@ export async function bridgeDriverStreamToPi(
       workPhase,
       requestLog,
       driverForCacheStats: driver,
+      streamContent,
     });
   } catch (error) {
     output.stopReason = isAborted(options?.signal) ? "aborted" : "error";
