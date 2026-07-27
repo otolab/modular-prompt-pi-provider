@@ -89,7 +89,7 @@
 | 論理モデル + passthrough（Pi 経由） | integration | `workflow-stream.test.ts` |
 | virtualModel passthrough | integration | 同上 |
 | virtualModel agentic | integration | 同上 |
-| 不正 config 起動時エラー | unit | `test/validate-config.test.ts`（既存） |
+| 不正 config 起動時エラー | unit | `test/validate-config.test.ts`、`test/load-pi-provider-config-validation.test.ts` |
 
 ## Experiment
 

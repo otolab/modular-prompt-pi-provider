@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizeProviderConfig } from "../src/config/normalize-config.js";
+import { ConfigValidationError } from "../src/config/validation/index.js";
 import { validateLogicalModelDefinition } from "../src/config/validate-config.js";
 
 describe("validateProviderConfig", () => {
@@ -192,6 +193,78 @@ describe("validateProviderConfig", () => {
         },
       }),
     ).toThrow(/duplicates workflow\.a\.virtualModel/);
+  });
+
+  it("defaultQueryOptions.maxTokens が 0 以下だとエラー", () => {
+    expect(() =>
+      normalizeProviderConfig({
+        models: {
+          gemma: {
+            provider: "mlx",
+            model: "mlx-community/gemma",
+            defaultQueryOptions: { maxTokens: 0 },
+          },
+        },
+      }),
+    ).toThrow(/maxTokens must be a number greater than 0/);
+  });
+
+  it("未知 provider はエラー", () => {
+    expect(() =>
+      normalizeProviderConfig({
+        models: {
+          gemma: {
+            provider: "unknown-vendor",
+            model: "mlx-community/gemma",
+            defaultQueryOptions: { maxTokens: 8192 },
+          },
+        },
+      }),
+    ).toThrow(/unknown provider/);
+  });
+
+  it("agentic workflow は modelSet 必須", () => {
+    expect(() =>
+      normalizeProviderConfig({
+        models: {
+          gemma: {
+            provider: "mlx",
+            model: "mlx-community/gemma",
+            defaultQueryOptions: { maxTokens: 8192 },
+          },
+        },
+        workflow: {
+          agentic: { type: "agentic" },
+        },
+      }),
+    ).toThrow(/requires modelSet/);
+  });
+
+  it("複数エラーを一括収集する", () => {
+    try {
+      normalizeProviderConfig({
+        models: {
+          a: {
+            provider: "bad",
+            model: "",
+            defaultQueryOptions: { maxTokens: 8192 },
+          },
+          b: {
+            provider: "mlx",
+            model: "m",
+            defaultQueryOptions: { maxTokens: 8192 },
+          },
+        },
+        processes: {
+          default: { model: "missing" },
+        },
+      });
+      expect.fail("should throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ConfigValidationError);
+      const issues = (error as ConfigValidationError).issues;
+      expect(issues.length).toBeGreaterThan(1);
+    }
   });
 });
 

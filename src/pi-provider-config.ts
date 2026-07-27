@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { parse as parseYaml } from "yaml";
+import { ConfigLoadError } from "./config/validation/index.js";
 
 /** Pi プラグインのディレクトリ名（プロバイダ ID と一致） */
 export const PLUGIN_DIR_NAME = "modular-prompt-provider";
@@ -348,20 +349,25 @@ function mergeYamlConfig(
 function parseConfigFile(
   path: string,
   readFile: (path: string) => string,
-): PiProviderYamlConfig | undefined {
+): PiProviderYamlConfig {
   try {
     const parsed = parseYaml(readFile(path));
     if (parsed === null || parsed === undefined) {
       return {};
     }
     if (typeof parsed !== "object" || Array.isArray(parsed)) {
-      console.error(`Invalid ${CONFIG_FILENAME} at ${path}: expected a mapping`);
-      return undefined;
+      throw new ConfigLoadError(path, `Invalid ${CONFIG_FILENAME}: expected a mapping`);
     }
     return parsed as PiProviderYamlConfig;
   } catch (error) {
-    console.error(`Failed to load ${CONFIG_FILENAME} from ${path}: ${error}`);
-    return undefined;
+    if (error instanceof ConfigLoadError) {
+      throw error;
+    }
+    throw new ConfigLoadError(
+      path,
+      `Failed to load ${CONFIG_FILENAME}`,
+      error,
+    );
   }
 }
 
@@ -417,18 +423,12 @@ export function loadPiProviderConfig(
   let usedProjectConfig = false;
 
   if (fileExists(paths.global)) {
-    const globalConfig = parseConfigFile(paths.global, readFile);
-    if (globalConfig) {
-      merged = mergeYamlConfig(merged, globalConfig);
-    }
+    merged = mergeYamlConfig(merged, parseConfigFile(paths.global, readFile));
   }
 
   if (isProjectTrusted && fileExists(paths.project)) {
-    const projectConfig = parseConfigFile(paths.project, readFile);
-    if (projectConfig) {
-      merged = mergeYamlConfig(merged, projectConfig);
-      usedProjectConfig = true;
-    }
+    merged = mergeYamlConfig(merged, parseConfigFile(paths.project, readFile));
+    usedProjectConfig = true;
   }
 
   const scope = { cwd, isProjectTrusted, usedProjectConfig };

@@ -34,7 +34,8 @@ modular-prompt-pi-provider/
       normalize-config.ts    ✅
       resolve-selection.ts   ✅
       resolve-model-set.ts   ✅
-      validate-config.ts     ✅
+      validate-config.ts     ✅ 薄い re-export
+      validation/            ✅ #53 拡充（collector / lint / load）
     workflow/
       passthrough.ts         ✅（#40 Phase 2）
       runner.ts              ✅
@@ -179,7 +180,9 @@ modular-prompt-pi-provider/
 | `test/workflow-passthrough.test.ts` | passthrough workflow | ✅ |
 | `test/workflow-virtual.test.ts` | DriverSet 構築 | ✅ |
 | `test/agentic-logging.test.ts` | agentic ログ抽出 | ✅ |
-| `test/validate-config.test.ts` | config 簡易バリデーション | ✅ |
+| `test/validate-config.test.ts` | config バリデーション（参照整合性・値域） | ✅ |
+| `test/load-pi-provider-config-validation.test.ts` | load + merge 後検証・YAML fail-fast | ✅ |
+| `test/lint-pi-settings.test.ts` | settings.json lint（警告） | ✅ |
 | `test/resolve-selection.test.ts` | model.id 解決 | ✅ |
 | `test/incremental-parser.test.ts` | thinking 増分パーサ（#27a） | ✅ |
 | `test/overflow-rewrite.test.ts` | MLX overflow リライト（#23） | ✅ |
