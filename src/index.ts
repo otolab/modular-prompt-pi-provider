@@ -38,9 +38,11 @@ export default async function (pi: ExtensionAPI): Promise<void> {
     const yamlConfig = loadPiProviderConfig({ cwd, isProjectTrusted });
     const baseResolved = initResolvedProviderConfig(yamlConfig);
     const discoveredConfig = await discoverApplicationConfig(baseResolved.applicationConfig);
-    const resolvedConfig = initResolvedProviderConfig(yamlConfig, {
-      models: discoveredConfig.models,
-    });
+    const resolvedConfig = initResolvedProviderConfig(
+      yamlConfig,
+      { models: discoveredConfig.models },
+      { cwd, isProjectTrusted, lintPiSettings: true },
+    );
     registerMlxProvider(pi, resolvedConfig);
     await runCacheSweepOnStartup();
     return resolvedConfig.applicationConfig;

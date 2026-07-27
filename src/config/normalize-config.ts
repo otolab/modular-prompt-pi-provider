@@ -1,4 +1,4 @@
-import type { ApplicationConfig, DriverCapability, DriverProvider, ModelSpec } from "@modular-prompt/driver";
+import type { ApplicationConfig, DriverCapability, ModelSpec } from "@modular-prompt/driver";
 import { DEFAULT_MODEL_FALLBACK } from "../constants.js";
 import type { PiProviderYamlConfig } from "../pi-provider-config.js";
 import { pickMlxDriverDefaultOptions } from "../driver/mlx-options.js";
@@ -11,7 +11,7 @@ import type {
   ResolvedProviderConfig,
   ResolvedVirtualModel,
 } from "./types.js";
-import { validateLogicalModelDefinition, validateProviderConfig } from "./validate-config.js";
+import { validateLogicalModelDefinition, validateProviderConfig } from "./validation/index.js";
 
 const DEFAULT_CAPABILITIES: DriverCapability[] = [
   "streaming",
@@ -30,14 +30,7 @@ function resolveDefaultPhysicalModel(): string {
   return process.env.MODULAR_PROMPT_PI_MODEL ?? DEFAULT_MODEL_FALLBACK;
 }
 
-/** YAML プロバイダ名 → driver の DriverProvider */
-export function normalizeDriverProvider(providerName: string): DriverProvider {
-  if (providerName === "mlx_lm" || providerName === "mlx") {
-    return "mlx";
-  }
-  return providerName as DriverProvider;
-}
-
+import { normalizeDriverProvider } from "./normalize-provider.js";
 /** レガシー `drivers` を `providers` にマージする */
 export function normalizeProviders(yaml: PiProviderYamlConfig): ProvidersConfig {
   const providers: ProvidersConfig = {};
@@ -196,9 +189,13 @@ export function resolveLogicalModels(
 
   if (isLegacyModelsArray(yaml.models)) {
     for (const entry of yaml.models) {
-      const { logicalName, definition } = legacyEntryToDefinition(entry);
-      validateLogicalModelDefinition(logicalName, definition);
-      result.set(logicalName, logicalModelToSpec(logicalName, definition, providers));
+      const logicalName = entry.id ?? entry.model ?? "(unknown)";
+      if (typeof entry.model !== "string" || entry.model.trim().length === 0) {
+        throw new Error(`Legacy models[] entry "${logicalName}" requires model.`);
+      }
+      const { logicalName: resolvedName, definition } = legacyEntryToDefinition(entry);
+      validateLogicalModelDefinition(resolvedName, definition);
+      result.set(resolvedName, logicalModelToSpec(resolvedName, definition, providers));
     }
     return result;
   }
@@ -282,7 +279,7 @@ export function normalizeProviderConfig(
     applicationConfig,
   };
 
-  validateProviderConfig(resolved);
+  validateProviderConfig(resolved, { lintPiSettings: false });
 
   return resolved;
 }

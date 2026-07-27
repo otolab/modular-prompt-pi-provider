@@ -6,6 +6,11 @@ import {
   createResolvedProviderConfig,
   type ResolvedProviderConfig,
 } from "../config.js";
+import {
+  logConfigValidationWarnings,
+  ValidationCollector,
+  lintPiSettings,
+} from "../config/validation/index.js";
 import type { PiProviderYamlConfig } from "../pi-provider-config.js";
 import { resolveConfiguredRequestLogDir } from "../pi-provider-config.js";
 import { resetModelRegistry } from "./model-registry.js";
@@ -48,9 +53,22 @@ export function initApplicationConfig(
 export function initResolvedProviderConfig(
   yamlConfig?: PiProviderYamlConfig,
   overrides?: Partial<ApplicationConfig>,
+  validationOptions?: {
+    cwd?: string;
+    isProjectTrusted?: boolean;
+    lintPiSettings?: boolean;
+  },
 ): ResolvedProviderConfig {
   initApplicationConfig(yamlConfig, overrides);
-  return getResolvedProviderConfig();
+  const resolved = getResolvedProviderConfig();
+
+  if (validationOptions?.lintPiSettings) {
+    const collector = new ValidationCollector();
+    lintPiSettings(collector, resolved, validationOptions);
+    logConfigValidationWarnings(collector.getWarnings());
+  }
+
+  return resolved;
 }
 
 export function getAIService(appConfig?: ApplicationConfig): AIService {

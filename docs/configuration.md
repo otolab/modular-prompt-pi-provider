@@ -199,8 +199,21 @@ modular-prompt フレームワーク全体の設定ディレクトリのよう�
 
 `models.json` に `cacheDir` 等を書いても本プラグインは参照しない。Pi `model.id` は YAML `models` の**論理名**と一致させる（[workflow.md](./workflow.md)）。
 
+## バリデーション（#53）
+
+`normalizeProviderConfig` / `loadResolvedProviderConfig` 時に `src/config/validation/` で検証する。
+
+| 種別 | 例 | 挙動 |
+|---|---|---|
+| **error** | 未登録 `processes.model`、未知 `provider`、`maxTokens <= 0` | 起動失敗（`ConfigValidationError`、複数件を一括表示） |
+| **warning** | 非推奨 `modelSets` ロール名、`settings.json` の物理パス `defaultModel` | `console.warn`（起動は継続） |
+
+- YAML パース失敗は `ConfigLoadError` で fail-fast（空 config への黙りフォールバックなし）
+- グローバル + プロジェクト merge **後**に `loadResolvedProviderConfig` で一括検証
+- 新ルール追加時は `validation/` に validator を足し、`ValidationCollector` で error / warning を分離する
+
 ## 関連 Issue
 
-- [#41](https://github.com/otolab/modular-prompt-pi-provider/issues/41) — 設定ローダ実装
+- [#53](https://github.com/otolab/modular-prompt-pi-provider/issues/53) — スキーマ検証拡充
 - [#30](https://github.com/otolab/modular-prompt-pi-provider/issues/30) — `cache` セクション
 - [#42](https://github.com/otolab/modular-prompt-pi-provider/issues/42) — `logging` セクション

@@ -1,7 +1,13 @@
 import type { ApplicationConfig, ModelSpec } from "@modular-prompt/driver";
 import type { PiProviderYamlConfig } from "./pi-provider-config.js";
-import { DEFAULT_MODEL_FALLBACK } from "./constants.js";
+import { loadPiProviderConfig, type LoadPiProviderConfigOptions } from "./pi-provider-config.js";
 import { normalizeProviderConfig } from "./config/normalize-config.js";
+import {
+  logConfigValidationWarnings,
+  ValidationCollector,
+  lintPiSettings,
+} from "./config/validation/index.js";
+import { DEFAULT_MODEL_FALLBACK } from "./constants.js";
 import type { ResolvedLogicalModel, ResolvedProviderConfig } from "./config/types.js";
 
 /** @deprecated {@link DEFAULT_MODEL_FALLBACK} を使用 */
@@ -115,6 +121,32 @@ export function getEnabledLogicalModels(
 
 export type { ResolvedProviderConfig } from "./config/types.js";
 export { normalizeProviderConfig } from "./config/normalize-config.js";
+export { normalizeDriverProvider } from "./config/normalize-provider.js";
+export {
+  ConfigLoadError,
+  ConfigValidationError,
+  formatValidationIssues,
+} from "./config/validation/index.js";
+
+/**
+ * YAML ロード → マージ → 正規化 → 検証を一括実行する。
+ * グローバル + プロジェクト merge 後の検証タイミングはここ。
+ */
+export function loadResolvedProviderConfig(
+  options: LoadPiProviderConfigOptions = {},
+): ResolvedProviderConfig {
+  const yaml = loadPiProviderConfig(options);
+  const resolved = normalizeProviderConfig(yaml);
+  const collector = new ValidationCollector();
+  lintPiSettings(collector, resolved, {
+    cwd: options.cwd,
+    isProjectTrusted: options.isProjectTrusted,
+    fileExists: options.fileExists,
+    readFile: options.readFile,
+  });
+  logConfigValidationWarnings(collector.getWarnings());
+  return resolved;
+}
 export {
   resolveSelection,
   resolveProcessFallback,
