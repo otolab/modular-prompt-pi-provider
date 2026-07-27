@@ -1,14 +1,17 @@
 # テスト戦略
 
-本リポジトリのテストは **Unit / Integration / Experiment** の 3 層に分ける。
+本リポジトリのテストは **Unit / Pi Official / Integration / Experiment** の 4 層に分ける。
 目的と実行タイミングが異なるため、同じ vitest プロジェクトに混在させない。
 
-## 3 層の責務
+## 4 層の責務
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Unit          決定的・高速・CI 必須                      │
 │  「配線と変換が正しいか」                                  │
+├─────────────────────────────────────────────────────────┤
+│  Pi Official   Pi 公式 provider シナリオ・TestDriver 必須   │
+│  「compat complete/stream 経由で公式契約を満たすか」        │
 ├─────────────────────────────────────────────────────────┤
 │  Integration   MLX 実機・逐次・CI は任意                    │
 │  「本番経路が一度は動くか」（pass/fail のみ）               │
@@ -21,6 +24,7 @@
 | 層 | ディレクトリ | コマンド | CI | 典型アサーション |
 |---|---|---|---|---|
 | Unit | `test/` | `npm run test:run` | ✅ | 厳密な等価・モック呼び出し |
+| Pi Official | `tests/pi-official/` | `npm run test:pi-official` | ✅（TestDriver 部分） | Pi 公式シナリオ関数の期待値 |
 | Integration | `tests/integration/` | `npm run test:integration` | 任意 | `stopReason !== error`、非空応答 |
 | Experiment | `tests/experiment/`（予定）+ CLI | `npm run compact:experimental` 等 | ❌ | 人手レビュー・ベンチマーク |
 
@@ -42,6 +46,27 @@
 
 設定: `vitest.config.ts`（`testTimeout: 10s`、逐次実行）
 
+## Pi Official（#35）
+
+**書くもの**
+
+- pi-mono `packages/ai/test/` のシナリオ関数を adapt（`tests/pi-official/support/scenarios/`、pi-ai 0.80.6）
+- `registerApiProvider` + `complete()` / `stream()`（`@earendil-works/pi-ai/compat`）経由で本拡張を検証
+- TestDriver 層: 決定的・CI 必須
+- MLX 層: `describe.skipIf(!probe.runtimeAvailable)` でオプション
+
+**対応する公式テスト**
+
+| ファイル | シナリオ |
+|---|---|
+| `stream.test.ts` | `handleStreaming`, `basicTextGeneration`, `handleToolCall` |
+| `abort.test.ts` | `testImmediateAbort`, `testAbortSignal`, `testAbortThenNewMessage` |
+| `tokens.test.ts` | `testTokensOnAbort` |
+| `tool-call-without-result.test.ts` | `testToolCallWithoutResult` |
+| `context-overflow.test.ts` | `testContextOverflow` + overflow リライト後の `isContextOverflow` |
+
+設定: `vitest.pi-official.config.ts`（`testTimeout: 600s`、逐次実行。MLX プローブは integration と共有）
+
 ## Integration
 
 **書くもの**
@@ -55,7 +80,7 @@
 
 - 応答テキストの品質評価
 - compact 要約の妥当性（experiment へ）
-- Pi 公式 `stream.test.ts` 等の完全互換（#35 で別管理）
+- Pi 公式 `stream.test.ts` 等の完全互換（#35 → `tests/pi-official/`）
 
 設定: `vitest.integration.config.ts`（`testTimeout: 600s`、逐次実行）
 
@@ -111,8 +136,9 @@
 
 ```bash
 npm run test:run           # unit のみ（CI と同じ）
+npm run test:pi-official   # Pi 公式 provider 互換（TestDriver 必須 + MLX 任意）
 npm run test:integration   # MLX 実機 integration
-npm run test:all           # unit + integration
+npm run test:all           # unit + pi-official + integration
 npm run compact:experimental -- --strategy stream-summarize --driver mlx
 ```
 
@@ -124,7 +150,7 @@ npm run compact:experimental -- --strategy stream-summarize --driver mlx
 
 ## CI
 
-`.github/workflows/ci.yml` は **unit のみ** 実行。integration はローカルまたは別 workflow（nightly / manual）を想定。
+`.github/workflows/ci.yml` は **unit + pi-official（TestDriver 部分）** を実行。integration / pi-official の MLX 層はローカルまたは別 workflow（nightly / manual）を想定。
 
 MLX モデルはメモリ制約のため **逐次実行**（`fileParallelism: false`, `maxWorkers: 1`）を unit / integration 共通で維持する。
 
