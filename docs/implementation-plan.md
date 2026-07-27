@@ -74,7 +74,9 @@ modular-prompt-pi-provider/
 ```
   src/
     adapter/
-      incremental-parser.ts  # P2
+      incremental-parser.ts  # ✅ #27a thinking
+      thinking-markers.ts    # ✅ getCapabilities + フォールバック
+      stream-content-emitter.ts
     hooks/
       overflow-rewrite.ts    # ✅ #23
       compaction.ts          # P1（#56 フォローアップ）
@@ -91,7 +93,7 @@ modular-prompt-pi-provider/
 | Pi `model.id` | 論理名または `virtualModel`。解決は `resolve-selection.ts` |
 | ドライバ保持 | **論理モデルごと 1 インスタンス**（`model-registry.ts`）。inflight dedup |
 | 推論実行 | **workflow 経由**（passthrough ストリーム / agentic 非ストリーム） |
-| ストリーム | passthrough は `text_delta` 直結。thinking タグ分離は P2 増分パーサ |
+| ストリーム | thinking 増分パーサ（#27a）。toolcall は `result` 後一括 |
 
 ## 優先度（本リポジトリ）
 
@@ -179,6 +181,7 @@ modular-prompt-pi-provider/
 | `test/agentic-logging.test.ts` | agentic ログ抽出 | ✅ |
 | `test/validate-config.test.ts` | config 簡易バリデーション | ✅ |
 | `test/resolve-selection.test.ts` | model.id 解決 | ✅ |
+| `test/incremental-parser.test.ts` | thinking 増分パーサ（#27a） | ✅ |
 | `test/overflow-rewrite.test.ts` | MLX overflow リライト（#23） | ✅ |
 | `tests/integration/workflow-stream.test.ts` | MLX workflow stream（#56） | ✅ |
 | `tests/integration/cache-hit.test.ts` | MLX KV キャッシュ（実機） | ✅ |

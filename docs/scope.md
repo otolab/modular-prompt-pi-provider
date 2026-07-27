@@ -36,7 +36,7 @@ driver は `QueryOptions.signal`、`result.usage`（`cacheReadTokens` / `cacheWr
 | **P1** | モデル discovery | `pi --list-models` に表示（`getCapabilities` 連携） | ✅ コード（実機未検証） |
 | **P1** | `session_shutdown` → `close()` | プロセスリークなし | — |
 | **P1** | `session_before_compact` + Prompt | 手動 `/compact` | — |
-| **P2** | 増分パーサ | `thinking_*` リアルタイム。タグが UI に漏れない | — |
+| **P2** | 増分パーサ | `thinking_*` リアルタイム。タグが UI に漏れない | ✅ unit（#27a） |
 | **P2** | `message_end` overflow リライト | unit + Pi `context-overflow`（#35） | ✅ unit |
 | **P3** | `context` 剪定 | トークン節約 | — |
 
@@ -56,7 +56,7 @@ driver は `QueryOptions.signal`、`result.usage`（`cacheReadTokens` / `cacheWr
 | MLX 実機 abort | ストリーム途中 abort → 次 `streamQuery` 正常（[#254](https://github.com/otolab/modular-prompt/issues/254) との整合） |
 | Pi `abort.test.ts` | 本拡張 + driver の結合で検証 |
 | Pi `tokens.test.ts` | `mapQueryResultUsageToPi` + driver `result.usage` |
-| thinking タグ | M1 は生 `text_delta` のため UI 露出の可能性あり（P2 で解消） |
+| thinking タグ | 増分パーサで stream 中分離（#27a）。`result` で最終整合 |
 
 ## マイルストーン
 

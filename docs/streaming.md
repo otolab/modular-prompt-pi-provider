@@ -100,3 +100,14 @@ if (!parser.emittedToolCalls && final.toolCalls?.length) {
 `options.signal` の要求仕様は [abort-spec.md](./abort-spec.md) を参照。
 
 要点: キャンセル時は `stopReason: "aborted"`、部分 content 保持。driver は `signal` で推論停止（0.14.0+）。本拡張は [abort-spec.md](./abort-spec.md) に従い Pi イベントへ変換する。
+
+## 関連ファイル（#27a）
+
+| ファイル | 役割 |
+|---|---|
+| `src/adapter/thinking-markers.ts` | `getCapabilities().specialTokens` + 既知フォールバック |
+| `src/adapter/incremental-parser.ts` | 状態機械・チャンク境界バッファ |
+| `src/adapter/stream-content-emitter.ts` | `text_*` / `thinking_*` イベント発行 |
+| `src/adapter/stream-bridge.ts` | passthrough ストリームへの統合 |
+
+マーカー解決の driver 公開 API 一元化は [modular-prompt#301](https://github.com/otolab/modular-prompt/issues/301) で追跡。現状は pi-provider 側にフォールバックを複製している。
