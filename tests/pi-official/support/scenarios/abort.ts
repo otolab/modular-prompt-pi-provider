@@ -29,7 +29,9 @@ export async function testAbortSignal<TApi extends Api>(
   const controller = new AbortController();
   const response = stream(llm, context, { ...options, signal: controller.signal });
   for await (const event of response) {
-    if (abortFired) return;
+    if (abortFired) {
+      break;
+    }
     if (event.type === "text_delta" || event.type === "thinking_delta") {
       text += event.delta;
     }

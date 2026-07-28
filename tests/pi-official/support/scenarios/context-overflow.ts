@@ -7,7 +7,10 @@ import { expect } from "vitest";
 import { complete } from "@earendil-works/pi-ai/compat";
 import { isContextOverflow } from "@earendil-works/pi-ai";
 import type { AssistantMessage, Context, Model } from "@earendil-works/pi-ai";
-import { rewriteAssistantOverflowMessage } from "../../../../src/hooks/overflow-rewrite.js";
+import {
+  isMlxOverflowErrorMessage,
+  rewriteAssistantOverflowMessage,
+} from "../../../../src/hooks/overflow-rewrite.js";
 
 const LOREM_IPSUM = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. `;
 
@@ -37,16 +40,24 @@ export async function testContextOverflow(model: Model): Promise<AssistantMessag
 }
 
 /**
- * MLX 生エラーは Pi の isContextOverflow に無い場合がある。
- * 本拡張の overflow リライト（#23）適用後に検出可能であることを確認する。
+ * `complete()` 経路で driver の MLX 形式 overflow が Pi AssistantMessage に載ること。
+ * message_end リライト（#23）は別途 `test/overflow-rewrite.test.ts` で検証。
  */
-export function assertOverflowDetectableAfterRewrite(
+export function assertDriverOverflowErrorSurfaces(message: AssistantMessage): void {
+  expect(message.stopReason).toBe("error");
+  expect(message.errorMessage).toBeTruthy();
+  expect(isMlxOverflowErrorMessage(message.errorMessage!)).toBe(true);
+}
+
+/**
+ * MLX 実機: 生エラーは Pi `isContextOverflow` に無い場合がある。
+ * #23 のリライト関数適用後に Pi 既知形式として検出できること（hook 本体は unit で検証済み）。
+ */
+export function assertMlxOverflowDetectableWithRewrite(
   message: AssistantMessage,
   model: Model,
 ): void {
-  expect(message.stopReason).toBe("error");
-  expect(message.errorMessage).toBeTruthy();
-
+  assertDriverOverflowErrorSurfaces(message);
   const rewritten = rewriteAssistantOverflowMessage(message, model) ?? message;
   expect(isContextOverflow(rewritten, model.contextWindow)).toBe(true);
 }

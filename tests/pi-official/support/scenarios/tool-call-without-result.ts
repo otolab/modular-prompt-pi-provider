@@ -62,6 +62,11 @@ export async function testToolCallWithoutResult<TApi extends Api>(
     .map((block) => (block.type === "text" ? block.text : ""))
     .join(" ");
   const toolCalls = secondResponse.content.filter((block) => block.type === "toolCall").length;
-  expect(toolCalls || textContent.length).toBeGreaterThan(0);
+
   expect(["stop", "toolUse"]).toContain(secondResponse.stopReason);
+  if (secondResponse.stopReason === "stop") {
+    expect(textContent.length).toBeGreaterThan(0);
+  } else {
+    expect(toolCalls).toBeGreaterThan(0);
+  }
 }

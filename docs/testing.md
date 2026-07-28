@@ -52,8 +52,8 @@
 
 - pi-mono `packages/ai/test/` のシナリオ関数を adapt（`tests/pi-official/support/scenarios/`、pi-ai 0.80.6）
 - `registerApiProvider` + `complete()` / `stream()`（`@earendil-works/pi-ai/compat`）経由で本拡張を検証
-- TestDriver 層: 決定的・CI 必須
-- MLX 層: `describe.skipIf(!probe.runtimeAvailable)` でオプション
+- TestDriver 層: 決定的・CI 必須（`tests/pi-official/testdriver/`、`vi-mocks` あり）
+- MLX 層: `tests/pi-official/mlx/`（`vi-mocks` なし・integration と同様に実 config を使用）
 
 **対応する公式テスト**
 
@@ -61,9 +61,9 @@
 |---|---|
 | `stream.test.ts` | `handleStreaming`, `basicTextGeneration`, `handleToolCall` |
 | `abort.test.ts` | `testImmediateAbort`, `testAbortSignal`, `testAbortThenNewMessage` |
-| `tokens.test.ts` | `testTokensOnAbort` |
+| `tokens.test.ts` | `testTokensOnAbort`（MLX のみ。TestDriver 層は usage が自明なため省略） |
 | `tool-call-without-result.test.ts` | `testToolCallWithoutResult` |
-| `context-overflow.test.ts` | `testContextOverflow` + overflow リライト後の `isContextOverflow` |
+| `context-overflow.test.ts` | `testContextOverflow`（MLX）/ driver overflow エラー表面化（TestDriver） |
 
 設定: `vitest.pi-official.config.ts`（`testTimeout: 600s`、逐次実行。MLX プローブは integration と共有）
 
