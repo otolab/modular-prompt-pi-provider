@@ -23,4 +23,4 @@ jobs:
         run: npm run typecheck
 
       - name: Test
-        run: npm run test:run
+        run: npm run test:run && npm run test:pi-official
