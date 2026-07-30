@@ -13,12 +13,16 @@ import type {
   ToolCall,
   ToolResultKind,
 } from "@modular-prompt/core";
+import {
+  collectFilePathsFromText,
+  materializePiImageForMlx,
+} from "./image-materializer.js";
 
-function piImageToAttachment(image: ImageContent): Attachment {
+function piImageToAttachment(image: ImageContent, preferredPath?: string): Attachment {
   return {
     type: "image_url",
     image_url: {
-      url: `data:${image.mimeType};base64,${image.data}`,
+      url: materializePiImageForMlx(image, preferredPath),
     },
   };
 }
@@ -27,9 +31,18 @@ function piUserContentToMp(content: UserMessage["content"]): string | Attachment
   if (typeof content === "string") {
     return content;
   }
+
+  const filePaths = content
+    .filter((part): part is TextContent => part.type === "text")
+    .flatMap((part) => collectFilePathsFromText(part.text));
+
+  let imageIndex = 0;
+
   return content.map((part) => {
     if (part.type === "image") {
-      return piImageToAttachment(part);
+      const preferredPath = filePaths[imageIndex];
+      imageIndex += 1;
+      return piImageToAttachment(part, preferredPath);
     }
     return { type: "text" as const, text: part.text };
   });
@@ -104,6 +117,23 @@ export function piMessageToElements(message: Message): MessageElement[] {
 
 export function piMessagesToElements(messages: Message[]): MessageElement[] {
   return messages.flatMap(piMessageToElements);
+}
+
+/** Context に Pi 画像ブロックが含まれるか */
+export function contextHasImages(messages: Message[]): boolean {
+  for (const message of messages) {
+    if (message.role !== "user") {
+      continue;
+    }
+    const { content } = message;
+    if (typeof content === "string") {
+      continue;
+    }
+    if (content.some((part) => part.type === "image")) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function createInitialAssistantMessage(

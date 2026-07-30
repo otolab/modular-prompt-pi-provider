@@ -27,7 +27,12 @@ import { resolveStreamTermination } from "./finish-reason.js";
 import { IncrementalThinkingParser } from "./incremental-parser.js";
 import { StreamContentEmitter } from "./stream-content-emitter.js";
 import { getDriverThinkingMarkers } from "./thinking-markers.js";
-import { createInitialAssistantMessage, appendTextBlock, getTextBlock } from "./message-mapper.js";
+import {
+  createInitialAssistantMessage,
+  appendTextBlock,
+  getTextBlock,
+  contextHasImages,
+} from "./message-mapper.js";
 import { mergeQueryOptions, piOptionsToQueryOptions } from "./options.js";
 import { emitToolCallsFromResult } from "./toolcall-emitter.js";
 import { piToolsToToolDefinitions } from "./tools.js";
@@ -215,6 +220,7 @@ export async function bridgeDriverStreamToPi(
       defaultQueryOptionsSource.defaultQueryOptions,
     );
     const piQueryOpts = piOptionsToQueryOptions(options, model, hasCacheDir);
+    const hasImages = contextHasImages(context.messages);
     const queryOpts = mergeQueryOptions(
       {
         stream: true,
@@ -222,6 +228,7 @@ export async function bridgeDriverStreamToPi(
       },
       {
         ...piQueryOpts,
+        ...(hasImages ? { mode: "chat" as const, cache: false } : {}),
         ...(context.tools?.length
           ? {
               tools: piToolsToToolDefinitions(context.tools),
@@ -358,6 +365,7 @@ async function runVirtualAgenticPath(params: {
       resolvedConfig.logicalModels.get(primaryLogicalName)!.defaultQueryOptions,
     );
     const piQueryOpts = piOptionsToQueryOptions(options, model, hasCacheDir);
+    const hasImages = contextHasImages(context.messages);
     const queryOpts = mergeQueryOptions(
       {
         stream: false,
@@ -365,6 +373,7 @@ async function runVirtualAgenticPath(params: {
       },
       {
         ...piQueryOpts,
+        ...(hasImages ? { mode: "chat" as const, cache: false } : {}),
         ...(context.tools?.length
           ? {
               tools: piToolsToToolDefinitions(context.tools),

@@ -23,10 +23,25 @@ models:
     defaultQueryOptions:
       maxTokens: 8192
 
+  # VLM（#31 試験用）。text は bonsai、画像入力はこちらを Pi で選択する。
+  minicpm-v46:
+    provider: mlx
+    model: mlx-community/MiniCPM-V-4.6-4bit
+    capabilities:
+      - vision
+    defaultQueryOptions:
+      maxTokens: 256
+      temperature: 0
+    driverOptions:
+      maxImageSize: 768
+
 modelSets:
   default:
     chat: bonsai
     default: default
+  vlm:
+    chat: minicpm-v46
+    default: minicpm-v46
 
 workflow:
   agentic:
