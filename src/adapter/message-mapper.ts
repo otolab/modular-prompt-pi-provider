@@ -15,19 +15,28 @@ import type {
 } from "@modular-prompt/core";
 import {
   collectFilePathsFromText,
+  type ImageMaterializeScope,
   materializePiImageForMlx,
 } from "./image-materializer.js";
 
-function piImageToAttachment(image: ImageContent, preferredPath?: string): Attachment {
+function piImageToAttachment(
+  image: ImageContent,
+  preferredPath: string | undefined,
+  scope: ImageMaterializeScope | undefined,
+): Attachment {
+  const url = scope
+    ? scope.materialize(image, preferredPath)
+    : materializePiImageForMlx(image, preferredPath);
   return {
     type: "image_url",
-    image_url: {
-      url: materializePiImageForMlx(image, preferredPath),
-    },
+    image_url: { url },
   };
 }
 
-function piUserContentToMp(content: UserMessage["content"]): string | Attachment[] {
+function piUserContentToMp(
+  content: UserMessage["content"],
+  scope?: ImageMaterializeScope,
+): string | Attachment[] {
   if (typeof content === "string") {
     return content;
   }
@@ -42,7 +51,7 @@ function piUserContentToMp(content: UserMessage["content"]): string | Attachment
     if (part.type === "image") {
       const preferredPath = filePaths[imageIndex];
       imageIndex += 1;
-      return piImageToAttachment(part, preferredPath);
+      return piImageToAttachment(part, preferredPath, scope);
     }
     return { type: "text" as const, text: part.text };
   });
@@ -61,14 +70,17 @@ function toolResultValue(content: ToolResultMessage["content"]): unknown {
     .join("\n");
 }
 
-export function piMessageToElements(message: Message): MessageElement[] {
+export function piMessageToElements(
+  message: Message,
+  scope?: ImageMaterializeScope,
+): MessageElement[] {
   switch (message.role) {
     case "user":
       return [
         {
           type: "message",
           role: "user",
-          content: piUserContentToMp(message.content),
+          content: piUserContentToMp(message.content, scope),
         },
       ];
     case "assistant": {
@@ -115,8 +127,11 @@ export function piMessageToElements(message: Message): MessageElement[] {
   }
 }
 
-export function piMessagesToElements(messages: Message[]): MessageElement[] {
-  return messages.flatMap(piMessageToElements);
+export function piMessagesToElements(
+  messages: Message[],
+  scope?: ImageMaterializeScope,
+): MessageElement[] {
+  return messages.flatMap((message) => piMessageToElements(message, scope));
 }
 
 /** Context に Pi 画像ブロックが含まれるか */

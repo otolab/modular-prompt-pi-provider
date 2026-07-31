@@ -2,6 +2,7 @@ import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   collectFilePathsFromText,
+  createImageMaterializeScope,
   materializePiImageForMlx,
 } from "../src/adapter/image-materializer.js";
 import { piMessageToElements, contextHasImages } from "../src/adapter/message-mapper.js";
@@ -11,6 +12,47 @@ describe("collectFilePathsFromText", () => {
     const text =
       '<file name="/tmp/a.jpeg"></file>\nWhat do you see?\n<file name="/tmp/b.png">hint</file>';
     expect(collectFilePathsFromText(text)).toEqual(["/tmp/a.jpeg", "/tmp/b.png"]);
+  });
+});
+
+describe("createImageMaterializeScope", () => {
+  it("deletes temp files on dispose", async () => {
+    const scope = createImageMaterializeScope();
+    const path = scope.materialize({
+      type: "image",
+      mimeType: "image/png",
+      data: Buffer.from("hello").toString("base64"),
+    });
+    expect(existsSync(path)).toBe(true);
+
+    await scope.dispose();
+    expect(existsSync(path)).toBe(false);
+  });
+
+  it("dispose is safe when files are already deleted", async () => {
+    const scope = createImageMaterializeScope();
+    const path = scope.materialize({
+      type: "image",
+      mimeType: "image/png",
+      data: Buffer.from("hello").toString("base64"),
+    });
+    unlinkSync(path);
+
+    await expect(scope.dispose()).resolves.toBeUndefined();
+    await expect(scope.dispose()).resolves.toBeUndefined();
+  });
+
+  it("does not delete reused @file paths", async () => {
+    const scope = createImageMaterializeScope();
+    const originalPath = import.meta.filename;
+    const path = scope.materialize(
+      { type: "image", mimeType: "image/png", data: "ignored" },
+      originalPath,
+    );
+    expect(path).toBe(originalPath);
+
+    await scope.dispose();
+    expect(existsSync(originalPath)).toBe(true);
   });
 });
 
