@@ -23,11 +23,17 @@ import { setActiveStreamSessionId } from "../cache/session-context.js";
 import { beginRequestLog } from "../logging/runtime.js";
 import { createAgenticRequestLogger } from "../logging/agentic-logger.js";
 import { piContextToCompiledPrompt } from "./context-to-prompt.js";
+import { createImageMaterializeScope } from "./image-materializer.js";
 import { resolveStreamTermination } from "./finish-reason.js";
 import { IncrementalThinkingParser } from "./incremental-parser.js";
 import { StreamContentEmitter } from "./stream-content-emitter.js";
 import { getDriverThinkingMarkers } from "./thinking-markers.js";
-import { createInitialAssistantMessage, appendTextBlock, getTextBlock } from "./message-mapper.js";
+import {
+  createInitialAssistantMessage,
+  appendTextBlock,
+  getTextBlock,
+  contextHasImages,
+} from "./message-mapper.js";
 import { mergeQueryOptions, piOptionsToQueryOptions } from "./options.js";
 import { emitToolCallsFromResult } from "./toolcall-emitter.js";
 import { piToolsToToolDefinitions } from "./tools.js";
@@ -162,6 +168,7 @@ export async function bridgeDriverStreamToPi(
   piStream.push({ type: "start", partial: output });
   const workPhase = "stream";
   const requestLog = beginRequestLog();
+  const imageScope = createImageMaterializeScope();
 
   try {
     if (isAborted(options?.signal)) {
@@ -196,6 +203,7 @@ export async function bridgeDriverStreamToPi(
           resolvedConfig,
           selection,
           selectionSource,
+          imageScope,
         });
         return;
       }
@@ -215,6 +223,7 @@ export async function bridgeDriverStreamToPi(
       defaultQueryOptionsSource.defaultQueryOptions,
     );
     const piQueryOpts = piOptionsToQueryOptions(options, model, hasCacheDir);
+    const hasImages = contextHasImages(context.messages);
     const queryOpts = mergeQueryOptions(
       {
         stream: true,
@@ -222,6 +231,7 @@ export async function bridgeDriverStreamToPi(
       },
       {
         ...piQueryOpts,
+        ...(hasImages ? { mode: "chat" as const, cache: false } : {}),
         ...(context.tools?.length
           ? {
               tools: piToolsToToolDefinitions(context.tools),
@@ -260,7 +270,7 @@ export async function bridgeDriverStreamToPi(
     }
 
     const driver = await getDriverForLogicalModel(logicalName);
-    const prompt = piContextToCompiledPrompt(context);
+    const prompt = piContextToCompiledPrompt(context, imageScope);
     const workflowRequest = buildPassthroughRequest(prompt, queryOpts);
 
     if (requestLog) {
@@ -317,6 +327,8 @@ export async function bridgeDriverStreamToPi(
     }
     piStream.push({ type: "error", reason: output.stopReason, error: output });
     piStream.end();
+  } finally {
+    await imageScope.dispose();
   }
 }
 
@@ -330,6 +342,7 @@ async function runVirtualAgenticPath(params: {
   resolvedConfig: ReturnType<typeof getResolvedProviderConfig>;
   selection: VirtualModelSelection;
   selectionSource: SelectionSource;
+  imageScope: ReturnType<typeof createImageMaterializeScope>;
 }): Promise<void> {
   const agenticPhase = "agentic";
   const {
@@ -342,6 +355,7 @@ async function runVirtualAgenticPath(params: {
     resolvedConfig,
     selection,
     selectionSource,
+    imageScope,
   } = params;
 
   try {
@@ -358,6 +372,7 @@ async function runVirtualAgenticPath(params: {
       resolvedConfig.logicalModels.get(primaryLogicalName)!.defaultQueryOptions,
     );
     const piQueryOpts = piOptionsToQueryOptions(options, model, hasCacheDir);
+    const hasImages = contextHasImages(context.messages);
     const queryOpts = mergeQueryOptions(
       {
         stream: false,
@@ -365,6 +380,7 @@ async function runVirtualAgenticPath(params: {
       },
       {
         ...piQueryOpts,
+        ...(hasImages ? { mode: "chat" as const, cache: false } : {}),
         ...(context.tools?.length
           ? {
               tools: piToolsToToolDefinitions(context.tools),
@@ -397,7 +413,7 @@ async function runVirtualAgenticPath(params: {
       });
     }
 
-    const prompt = piContextToCompiledPrompt(context);
+    const prompt = piContextToCompiledPrompt(context, imageScope);
     const workflowRequest = buildPassthroughRequest(prompt, queryOpts);
     const agenticLogger = requestLog
       ? createAgenticRequestLogger(requestLog)
